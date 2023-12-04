@@ -4,6 +4,9 @@
 
 DWORD WINAPI networkThread(LPVOID lpParam)
 {
-	printf("Network Thread\n");
+	PNTDATA ntData = (PNTDATA)lpParam; //server thread data
+	int tid = ntData->tid;
+
+	printf("Network Thread no. %d\n", tid);
 	return 0;
 }

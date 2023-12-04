@@ -4,6 +4,9 @@
 
 DWORD WINAPI workerThread(LPVOID lpParam)
 {
-	printf("Worker Thread\n");
+	PWTDATA wtData = (PWTDATA)lpParam; //server thread data
+	int tid = wtData->tid;
+
+	printf("Worker Thread no. %d\n", tid);
 	return 0;
 }
