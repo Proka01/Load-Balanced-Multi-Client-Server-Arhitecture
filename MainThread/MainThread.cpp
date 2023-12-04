@@ -20,7 +20,6 @@
 int main()
 {
     JOB_REQUEST_QUEUE job_request_queue;
-    PSOCKET_POOL spoolArr[MAX_SOCKET_POOLS];
     std::vector<std::shared_ptr<SOCKET_POOL>> socket_pool_ptrs;
 
     PLTDATA pltDataArr[MAX_LISTENER_THREADS];
@@ -39,13 +38,7 @@ int main()
     //Init socket pools
     for (int i = 0; i < MAX_SOCKET_POOLS; i++)
     {
-        spoolArr[i] = (PSOCKET_POOL)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(SOCKET_POOL));
-        
-        if (spoolArr[i] != NULL)
-        {
-            spoolArr[i]->spid = i;
-            socket_pool_ptrs.push_back(std::make_shared<SOCKET_POOL>(*(spoolArr[i])));
-        }
+        socket_pool_ptrs.push_back(std::make_shared<SOCKET_POOL>(i, std::vector<SOCKET>()));
     }
 
     //Init pltDataArr

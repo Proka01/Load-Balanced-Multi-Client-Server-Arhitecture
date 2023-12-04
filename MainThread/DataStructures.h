@@ -7,16 +7,24 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <mutex>
+#include <thread>
 
 #define MAX_SOCKET_POOLS 3
 #define MAX_WORKER_THREADS 3
 #define MAX_NETWORK_THREADS (MAX_SOCKET_POOLS)
 #define MAX_LISTENER_THREADS 1
 #define MAX_THREADS ((MAX_WORKER_THREADS) + (MAX_NETWORK_THREADS) + (MAX_LISTENER_THREADS))
+#define DEFAULT_BUFLEN 512
 
 typedef struct socket_pool {
     int spid;
     std::vector<SOCKET> pool;
+    std::mutex mutex;
+
+    socket_pool(int spid, const std::vector<SOCKET>& pool)
+        : spid(spid), pool(pool), mutex() {}
+
 } SOCKET_POOL, * PSOCKET_POOL;
 
 typedef struct request {

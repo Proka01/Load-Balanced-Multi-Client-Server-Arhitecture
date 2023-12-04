@@ -3,6 +3,12 @@
 
 #include "DataStructures.h"
 #include <winsock2.h>
+#include <windows.h>
+#include <ws2tcpip.h> // Include ws2tcpip.h instead of winsock2.h
+#include <tchar.h>
+#include <strsafe.h>
+
+#define DEFAULT_PORT "27015"
 
 typedef struct ListenerThreadData {
     int tid;
