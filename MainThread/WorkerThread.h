@@ -6,7 +6,7 @@
 
 typedef struct WorkerThreadData {
     int tid;
-    std::shared_ptr<JOB_REQUEST_QUEUE> request_queue;
+    std::shared_ptr<JOB_REQUEST_QUEUE> request_queue_ptr;
 } WTDATA, * PWTDATA;
 
 DWORD WINAPI workerThread(LPVOID lpParam);

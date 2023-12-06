@@ -16,10 +16,20 @@
 #pragma comment (lib, "Ws2_32.lib")
 // #pragma comment (lib, "Mswsock.lib")
 
-
 int main()
 {
-    JOB_REQUEST_QUEUE job_request_queue;
+    printf("<-- SERVER --> \n\n");
+    WSADATA wsaData;
+    int iResult;
+
+    // Initialize Winsock
+    iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (iResult != 0) {
+        printf("WSAStartup failed with error: %d\n", iResult);
+        return 1;
+    }
+
+    std::shared_ptr<JOB_REQUEST_QUEUE> job_request_queue_shared_ptr = std::make_shared<JOB_REQUEST_QUEUE>();
     std::vector<std::shared_ptr<SOCKET_POOL>> socket_pool_ptrs;
 
     PLTDATA pltDataArr[MAX_LISTENER_THREADS];
@@ -62,7 +72,7 @@ int main()
         {
             pntDataArr[i]->tid = i;
             pntDataArr[i]->spoolPtr = socket_pool_ptrs[i]; //TODO: if ith ptr failed initializing this may cause problem
-            pntDataArr[i]->request_queue_ptr = (std::make_shared<JOB_REQUEST_QUEUE>(job_request_queue));
+            pntDataArr[i]->request_queue_ptr = job_request_queue_shared_ptr;
         }
     }
 
@@ -74,7 +84,7 @@ int main()
         if (pwtDataArr[i] != NULL)
         {
             pwtDataArr[i]->tid = i;
-            pwtDataArr[i]->request_queue = (std::make_shared<JOB_REQUEST_QUEUE>(job_request_queue));
+            pwtDataArr[i]->request_queue_ptr = job_request_queue_shared_ptr;
         }
     }
 
@@ -175,6 +185,7 @@ int main()
         }
     }
 
+    WSACleanup();
     //getchar();
     return 0;
 }

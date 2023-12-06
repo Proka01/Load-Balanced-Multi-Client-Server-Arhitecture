@@ -8,7 +8,7 @@ DWORD WINAPI listenerThread(LPVOID lpParam)
 	int tid = ltData->tid;
 	std::vector<std::shared_ptr<SOCKET_POOL>> spoolPtrs = ltData->spoolPtrs;
 
-    WSADATA wsaData;
+    //WSADATA wsaData;
     int iResult;
 
     SOCKET ListenSocket = INVALID_SOCKET;
@@ -18,11 +18,13 @@ DWORD WINAPI listenerThread(LPVOID lpParam)
     struct addrinfo hints;
 
     // Initialize Winsock
+    /*
     iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (iResult != 0) {
         printf("WSAStartup failed with error: %d\n", iResult);
         return 1;
     }
+    */
 
     //Windows API macro used to set a block of memory to zero
     ZeroMemory(&hints, sizeof(hints));
@@ -104,7 +106,7 @@ DWORD WINAPI listenerThread(LPVOID lpParam)
         }
     }
 
-    WSACleanup();
+    //WSACleanup();
     getchar();
     return 0;
 }

@@ -60,6 +60,9 @@ int generateRandomNumber(int min, int max) {
     return rand() % (max - min + 1) + min;
 }
 
+//argv[0] - name of .exe file
+//argv[1] - server dns name or ip address (localhost in this case)
+//argv[2] - client idx
 int __cdecl main(int argc, char** argv)
 {
     printf("CLIENT\n\n");
@@ -72,9 +75,27 @@ int __cdecl main(int argc, char** argv)
     char recvbuf[DEFAULT_BUFLEN];
     int iResult;
     int recvbuflen = DEFAULT_BUFLEN;
+    char clientName[20];
 
     // Validate the parameters
+    /*
     if (argc != 2) {
+        printf("usage: %s server-name\n", argv[0]);
+        return 1;
+    }
+    */
+
+    if (argc == 3)
+    {
+        int id = atoi(argv[2]);
+        snprintf(clientName, sizeof(clientName), "Client%d", id);
+    }
+    else if (argc == 2)
+    {
+        snprintf(clientName, sizeof(clientName), "Client");
+    }
+    else
+    {
         printf("usage: %s server-name\n", argv[0]);
         return 1;
     }
@@ -135,10 +156,14 @@ int __cdecl main(int argc, char** argv)
         printf("------------------\n");
         char msg[MSG_LEN];
 
-        int randomNumber = generateRandomNumber(-1, 50);
-        sprintf_s(msg, sizeof(msg), "%d", randomNumber);
+        int randomNumberA = generateRandomNumber(1, 100);
+        int randomNumberB = generateRandomNumber(1, 100);
+        int randomOp = generateRandomNumber(0,4);
+
+
+        sprintf_s(msg, sizeof(msg), "%s-%d-%d-%d", clientName, randomNumberA, randomNumberB, randomOp);
         size_t len = strlen(msg);
-        printf("Sending %d to server\n", randomNumber);
+        printf("Sending [%s] to server\n", msg);
 
         iResult = send(ConnectSocket, msg, len, 0);
         if (iResult == SOCKET_ERROR) {
@@ -149,7 +174,7 @@ int __cdecl main(int argc, char** argv)
         }
 
         //client want to stop comunication if random number is negative
-        if (randomNumber < 0) break;
+        //if (randomNumber < 0) break;
 
         //Read msg from server
         iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
@@ -165,7 +190,7 @@ int __cdecl main(int argc, char** argv)
         else
             printf("recv failed with error: %d\n", WSAGetLastError());
 
-        Sleep(2000);
+        Sleep(1000);
     } while (iResult > 0);
 
     // shutdown the connection since no more data will be sent
