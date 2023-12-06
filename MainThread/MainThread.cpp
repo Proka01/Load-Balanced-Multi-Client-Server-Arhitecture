@@ -11,14 +11,75 @@
 #include "NetworkThread.h"
 #include "WorkerThread.h"
 #include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
 
 // Need to link with Ws2_32.lib
 #pragma comment (lib, "Ws2_32.lib")
 // #pragma comment (lib, "Mswsock.lib")
 
+PLTDATA pltDataArr[MAX_LISTENER_THREADS];
+PNTDATA pntDataArr[MAX_NETWORK_THREADS];
+PWTDATA pwtDataArr[MAX_WORKER_THREADS];
+
+DWORD   dwListenerThreadIdArr[MAX_LISTENER_THREADS];
+HANDLE  hListenerThreadArr[MAX_LISTENER_THREADS];
+
+DWORD   dwNetworkThreadIdArr[MAX_NETWORK_THREADS];
+HANDLE  hNetworkThreadIdArr[MAX_NETWORK_THREADS];
+
+DWORD   dwWorkerThreadIdArr[MAX_WORKER_THREADS];
+HANDLE  hWorkerThreadArr[MAX_WORKER_THREADS];
+
+void handleSignal(int signal)
+{
+    // Close all ListenerThreads handles and free memory allocations.
+    for (int i = 0; i < MAX_LISTENER_THREADS; i++)
+    {
+        CloseHandle(hListenerThreadArr[i]);
+        if (pltDataArr[i] != NULL)
+        {
+            HeapFree(GetProcessHeap(), 0, pltDataArr[i]);
+            pltDataArr[i] = NULL;    // Ensure address is not reused.
+        }
+    }
+
+    // Close all NetworkThreads handles and free memory allocations.
+    for (int i = 0; i < MAX_NETWORK_THREADS; i++)
+    {
+        CloseHandle(hNetworkThreadIdArr[i]);
+        if (pntDataArr[i] != NULL)
+        {
+            HeapFree(GetProcessHeap(), 0, pntDataArr[i]);
+            pntDataArr[i] = NULL;    // Ensure address is not reused.
+        }
+    }
+
+    // Close all WorkerThreads handles and free memory allocations.
+    for (int i = 0; i < MAX_WORKER_THREADS; i++)
+    {
+        CloseHandle(hWorkerThreadArr[i]);
+        if (pwtDataArr[i] != NULL)
+        {
+            HeapFree(GetProcessHeap(), 0, pwtDataArr[i]);
+            pwtDataArr[i] = NULL;    // Ensure address is not reused.
+        }
+    }
+
+    WSACleanup();
+}
+
 int main()
 {
     printf("<-- SERVER --> \n\n");
+
+    // Register signal handler for Ctrl+C (SIGINT)
+    signal(SIGINT, handleSignal);
+
+    // Register signal handler for pressing x button in terminal (SIGTERM)
+    signal(SIGTERM, handleSignal);
+
     WSADATA wsaData;
     int iResult;
 
@@ -31,19 +92,6 @@ int main()
 
     std::shared_ptr<JOB_REQUEST_QUEUE> job_request_queue_shared_ptr = std::make_shared<JOB_REQUEST_QUEUE>();
     std::vector<std::shared_ptr<SOCKET_POOL>> socket_pool_ptrs;
-
-    PLTDATA pltDataArr[MAX_LISTENER_THREADS];
-    PNTDATA pntDataArr[MAX_NETWORK_THREADS];
-    PWTDATA pwtDataArr[MAX_WORKER_THREADS];
-
-    DWORD   dwListenerThreadIdArr[MAX_LISTENER_THREADS];
-    HANDLE  hListenerThreadArr[MAX_LISTENER_THREADS];
-
-    DWORD   dwNetworkThreadIdArr[MAX_NETWORK_THREADS];
-    HANDLE  hNetworkThreadIdArr[MAX_NETWORK_THREADS];
-
-    DWORD   dwWorkerThreadIdArr[MAX_WORKER_THREADS];
-    HANDLE  hWorkerThreadArr[MAX_WORKER_THREADS];
 
     //Init socket pools
     for (int i = 0; i < MAX_SOCKET_POOLS; i++)
@@ -152,40 +200,7 @@ int main()
     WaitForMultipleObjects(MAX_WORKER_THREADS, hWorkerThreadArr, TRUE, INFINITE);
 
 
-    // Close all ListenerThreads handles and free memory allocations.
-    for (int i = 0; i < MAX_LISTENER_THREADS; i++)
-    {
-        CloseHandle(hListenerThreadArr[i]);
-        if (pltDataArr[i] != NULL)
-        {
-            HeapFree(GetProcessHeap(), 0, pltDataArr[i]);
-            pltDataArr[i] = NULL;    // Ensure address is not reused.
-        }
-    }
-
-    // Close all NetworkThreads handles and free memory allocations.
-    for (int i = 0; i < MAX_NETWORK_THREADS; i++)
-    {
-        CloseHandle(hNetworkThreadIdArr[i]);
-        if (pntDataArr[i] != NULL)
-        {
-            HeapFree(GetProcessHeap(), 0, pntDataArr[i]);
-            pntDataArr[i] = NULL;    // Ensure address is not reused.
-        }
-    }
-
-    // Close all WorkerThreads handles and free memory allocations.
-    for (int i = 0; i < MAX_WORKER_THREADS; i++)
-    {
-        CloseHandle(hWorkerThreadArr[i]);
-        if (pwtDataArr[i] != NULL)
-        {
-            HeapFree(GetProcessHeap(), 0, pwtDataArr[i]);
-            pwtDataArr[i] = NULL;    // Ensure address is not reused.
-        }
-    }
-
-    WSACleanup();
+    
     //getchar();
     return 0;
 }

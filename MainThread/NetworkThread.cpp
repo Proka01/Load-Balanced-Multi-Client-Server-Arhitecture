@@ -34,6 +34,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
     int iResult;
 
 	std::vector<struct pollfd> pollfds;
+	std::unordered_set<int> fds_idxs_to_remove;
 	while (1)
 	{
 		{
@@ -76,6 +77,13 @@ DWORD WINAPI networkThread(LPVOID lpParam)
 					//Read msg from Client
 					iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
 
+					//TODO: need to fix
+					if (strstr(recvbuf, "terminate") != NULL)
+					{
+						printf("Termination signal received. Closing connection.\n");
+						fds_idxs_to_remove.insert(i);
+					}
+
 					if (iResult > 0) 
 					{
 						printf("---------------\n");
@@ -101,17 +109,6 @@ DWORD WINAPI networkThread(LPVOID lpParam)
 							// Failed to parse the string
 							printf("Failed to parse the string.\n");
 						}
-
-						/* 
-						{
-							std::lock_guard<std::mutex> lock(job_resp_queue_ptr->mutex);
-							printf("Network%d resp size: %d\n", tid, job_resp_queue_ptr->response_queue.size());
-						}
-
-						// Send msg to client
-						int iSendResult = send(ClientSocket, recvbuf, iResult, 0);
-						printf("---------------\n\n");
-						*/
 					}
 					else if (iResult == 0)
 					{
@@ -126,6 +123,32 @@ DWORD WINAPI networkThread(LPVOID lpParam)
 
 				}
 			}
+
+			//TODO: need to fix
+			//remove disconnected sockets from pool
+			if (!fds_idxs_to_remove.empty())
+			{
+				std::vector<SOCKET> fds_idx_to_stay;
+
+				for (int i = 0; i < spoolPtr->pool.size(); i++)
+				{
+					SOCKET fd = spoolPtr->pool[i];
+
+					if (fds_idxs_to_remove.find(i) != fds_idxs_to_remove.end())
+					{
+						fds_idx_to_stay.push_back(fd);
+					}
+					else
+					{
+						closesocket(fd);
+					}
+				}
+
+				std::lock_guard<std::mutex> lock(spoolPtr->mutex);
+				spoolPtr->pool.clear();
+				spoolPtr->pool = fds_idx_to_stay;
+			}
+			
 		}
 		// Timeout occurred
 		else if (result == 0) 

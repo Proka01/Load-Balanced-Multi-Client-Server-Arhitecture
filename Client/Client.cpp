@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <signal.h>
 
 
 // Need to link with Ws2_32.lib, Mswsock.lib, and Advapi32.lib
@@ -56,6 +57,28 @@ int inputLength(char* msg)
     return length;
 }
 
+SOCKET ConnectSocket = INVALID_SOCKET;
+void handleSignal(int signal)
+{
+    size_t len = strlen("terminate");
+    int iResult = send(ConnectSocket, "terminate", len, 0);
+    if (iResult == SOCKET_ERROR) 
+    {
+        printf("send failed with error: %d\n", WSAGetLastError());    
+    }
+
+    // Shutdown the socket before cleanup
+    shutdown(ConnectSocket, SD_BOTH);
+
+    // Close the socket
+    closesocket(ConnectSocket);
+
+    // Cleanup Winsock
+    WSACleanup();
+
+    exit(0);
+}
+
 int generateRandomNumber(int min, int max) {
     return rand() % (max - min + 1) + min;
 }
@@ -68,8 +91,11 @@ int __cdecl main(int argc, char** argv)
     printf("CLIENT\n\n");
     srand((unsigned int)time(NULL));
 
+    // Register signal handler for Ctrl+C (SIGINT)
+    signal(SIGINT, handleSignal);
+
     WSADATA wsaData;
-    SOCKET ConnectSocket = INVALID_SOCKET;
+    //SOCKET ConnectSocket = INVALID_SOCKET;
     struct addrinfo* result = NULL, * ptr = NULL, hints;
     const char* sendbuf = "this is a test";
     char recvbuf[DEFAULT_BUFLEN];
@@ -77,13 +103,6 @@ int __cdecl main(int argc, char** argv)
     int recvbuflen = DEFAULT_BUFLEN;
     char clientName[20];
 
-    // Validate the parameters
-    /*
-    if (argc != 2) {
-        printf("usage: %s server-name\n", argv[0]);
-        return 1;
-    }
-    */
 
     if (argc == 3)
     {
@@ -193,19 +212,7 @@ int __cdecl main(int argc, char** argv)
         Sleep(1000);
     } while (iResult > 0);
 
-    // shutdown the connection since no more data will be sent
-    iResult = shutdown(ConnectSocket, SD_SEND);
-    if (iResult == SOCKET_ERROR) {
-        printf("shutdown failed with error: %d\n", WSAGetLastError());
-        closesocket(ConnectSocket);
-        WSACleanup();
-        return 1;
-    }
-
-
-    // cleanup
-    closesocket(ConnectSocket);
-    WSACleanup();
+    
 
     getchar();
 

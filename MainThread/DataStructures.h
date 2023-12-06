@@ -9,6 +9,7 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <unordered_set>
 
 #define MAX_SOCKET_POOLS 3
 #define MAX_WORKER_THREADS 3
