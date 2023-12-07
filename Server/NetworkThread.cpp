@@ -77,12 +77,11 @@ DWORD WINAPI networkThread(LPVOID lpParam)
 					//Read msg from Client
 					iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
 
-					//TODO: need to fix
 					if (strstr(recvbuf, "terminate") != NULL)
 					{
 						printf("Termination signal received. Closing connection.!!!!!!!!!!!!!!!!!!!!!!!\n");
 						fds_idxs_to_remove.insert(i);
-						printf("[removed idx-fd: %d-%d]\n",i, pollfds[i].fd);
+						//printf("[removed idx-fd: %d-%d]\n",i, pollfds[i].fd);
 					}
 
 					if (iResult > 0) 
@@ -125,7 +124,6 @@ DWORD WINAPI networkThread(LPVOID lpParam)
 				}
 			}
 
-			//TODO: need to fix
 			//remove disconnected sockets from pool
 			if (!fds_idxs_to_remove.empty())
 			{
