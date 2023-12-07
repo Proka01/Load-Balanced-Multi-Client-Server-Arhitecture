@@ -80,8 +80,9 @@ DWORD WINAPI networkThread(LPVOID lpParam)
 					//TODO: need to fix
 					if (strstr(recvbuf, "terminate") != NULL)
 					{
-						printf("Termination signal received. Closing connection.\n");
+						printf("Termination signal received. Closing connection.!!!!!!!!!!!!!!!!!!!!!!!\n");
 						fds_idxs_to_remove.insert(i);
+						printf("[removed idx-fd: %d-%d]\n",i, pollfds[i].fd);
 					}
 
 					if (iResult > 0) 
@@ -128,13 +129,14 @@ DWORD WINAPI networkThread(LPVOID lpParam)
 			//remove disconnected sockets from pool
 			if (!fds_idxs_to_remove.empty())
 			{
+				std::lock_guard<std::mutex> lock(spoolPtr->mutex);
 				std::vector<SOCKET> fds_idx_to_stay;
 
 				for (int i = 0; i < spoolPtr->pool.size(); i++)
 				{
 					SOCKET fd = spoolPtr->pool[i];
 
-					if (fds_idxs_to_remove.find(i) != fds_idxs_to_remove.end())
+					if (fds_idxs_to_remove.find(i) == fds_idxs_to_remove.end())
 					{
 						fds_idx_to_stay.push_back(fd);
 					}
@@ -142,11 +144,12 @@ DWORD WINAPI networkThread(LPVOID lpParam)
 					{
 						closesocket(fd);
 					}
-				}
+				}				
 
-				std::lock_guard<std::mutex> lock(spoolPtr->mutex);
 				spoolPtr->pool.clear();
 				spoolPtr->pool = fds_idx_to_stay;
+
+				fds_idxs_to_remove.clear();
 			}
 			
 		}
