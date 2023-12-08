@@ -17,7 +17,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
     PNTDATA ntData = (PNTDATA)lpParam; //server thread data
     int tid = ntData->tid;
     std::shared_ptr<SocketPool> spoolPtr = ntData->spoolPtr;
-    std::shared_ptr<JOB_REQUEST_QUEUE> job_req_queue_ptr = ntData->request_queue_ptr;
+    std::shared_ptr<JobRequestQueue> job_req_queue_ptr = ntData->request_queue_ptr;
     std::shared_ptr<JobResponseQueue> job_resp_queue_ptr = std::make_shared<JobResponseQueue>();
 
     char recvbuf[DEFAULT_BUFLEN];
@@ -93,8 +93,11 @@ DWORD WINAPI networkThread(LPVOID lpParam)
                             //need global id counter, for now id mocked to -1
                             Request req(-1, a, b, static_cast<Operation> (op), ClientSocket, job_resp_queue_ptr);
 
-                            std::lock_guard<std::mutex> lock(job_req_queue_ptr->mutex);
-                            job_req_queue_ptr->request_queue.push(req);
+                            /*std::lock_guard<std::mutex> lock(job_req_queue_ptr->mutex);
+                            job_req_queue_ptr->request_queue.push(req);*/
+
+                            //Add created request to queue
+                            job_req_queue_ptr->addToQueue(req);
                         }
                         else {
                             // Failed to parse the string

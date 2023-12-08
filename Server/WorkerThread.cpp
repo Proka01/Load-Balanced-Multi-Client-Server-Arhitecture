@@ -6,7 +6,7 @@ DWORD WINAPI workerThread(LPVOID lpParam)
 {
     PWTDATA wtData = (PWTDATA)lpParam; //server thread data
     int tid = wtData->tid;
-    std::shared_ptr<JOB_REQUEST_QUEUE> job_req_queue_ptr = wtData->request_queue_ptr;
+    std::shared_ptr<JobRequestQueue> job_req_queue_ptr = wtData->request_queue_ptr;
 
     while (1)
     {

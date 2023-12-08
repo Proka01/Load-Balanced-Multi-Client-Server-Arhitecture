@@ -180,13 +180,42 @@ public:
     }
 };
 
-typedef struct job_request_queue 
-{
+//typedef struct job_request_queue 
+//{
+//    std::queue<Request> request_queue;
+//    std::mutex mutex;
+//
+//    job_request_queue() : request_queue(), mutex() {}
+////} JOB_REQUEST_QUEUE, * PJOB_REQUEST_QUEUE;
+
+class JobRequestQueue {
+public:
     std::queue<Request> request_queue;
     std::mutex mutex;
 
-    job_request_queue() : request_queue(), mutex() {}
-} JOB_REQUEST_QUEUE, * PJOB_REQUEST_QUEUE;
+    JobRequestQueue() : request_queue(), mutex() {}
+
+    void addToQueue(Request req)
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        request_queue.push(req);
+    }
+
+    Request* getRequestFromQueue()
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        //printf("Worker%d: %d\n", tid, job_req_queue_ptr->request_queue.size());
+
+        Request* req = NULL;
+        if (!request_queue.empty())
+        {
+            *req = request_queue.front();
+            request_queue.pop();
+        }
+
+        return req;
+    }
+};
 
 
 #endif // DATA_STRUCTURES_H

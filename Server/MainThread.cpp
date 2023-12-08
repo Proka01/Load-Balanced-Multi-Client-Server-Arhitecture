@@ -90,7 +90,7 @@ int main()
         return 1;
     }
 
-    std::shared_ptr<JOB_REQUEST_QUEUE> job_request_queue_shared_ptr = std::make_shared<JOB_REQUEST_QUEUE>();
+    std::shared_ptr<JobRequestQueue> job_request_queue_shared_ptr = std::make_shared<JobRequestQueue>();
     std::vector<std::shared_ptr<SocketPool>> socket_pool_ptrs;
 
     //Init socket pools
