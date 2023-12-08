@@ -114,38 +114,45 @@ public:
     char resp_msg[DEFAULT_BUFLEN];
 };
 
-typedef struct job_response_queue 
-{
+class JobResponseQueue {
+public:
     std::queue<Response> response_queue;
     std::mutex mutex;
 
-    job_response_queue() : response_queue(), mutex() {}
-} JOB_RESPONSE_QUEUE, * PJOB_RESPONSE_QUEUE;
+    JobResponseQueue() : response_queue(), mutex() {}
 
-//typedef struct request 
-//{
-//    int rid;
-//    int a;
-//    int b;
-//    enum Operation op;
-//    SOCKET clientSocket;
-////    std::shared_ptr<JOB_RESPONSE_QUEUE> job_resp_queue_ptr;
-//
-//    request() : rid(0), a(0), b(0), op(PLUS), clientSocket(0) {}
-//
-//    request(int rid, int a, int b, enum Operation op, SOCKET clientSocket, std::shared_ptr<JOB_RESPONSE_QUEUE> responseQueuePtr)
-//        : rid(rid), a(a), b(b), op(op), clientSocket(clientSocket), job_resp_queue_ptr(responseQueuePtr) {}
-//
-//    void displayInfo()
-//    {
-//        printf("Request ID: %d\n", rid);
-//        printf("Operand A: %d\n", a);
-//        printf("Operand B: %d\n", b);
-//        printf("Operation: %d\n", op);
-//        printf("Client Socket: %d\n", clientSocket);
-//    }
-//
-//} REQUEST;
+    void sendMsgToClientsFromQueue()
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        while (!response_queue.empty())
+        {
+            Response resp = response_queue.front();
+            response_queue.pop();
+
+            int iSendResult = send(resp.clientSocket, resp.resp_msg, inputLength(resp.resp_msg), 0);
+            printf("---------------\n\n");
+        }
+    }
+
+    void addToQueue(Response resp)
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        response_queue.push(resp);
+    }
+
+private:
+    int inputLength(char* msg)
+    {
+        int length = strlen(msg);
+        if (length > 0 && msg[length - 1] == '\n')
+        {
+            msg[length - 1] = '\0';
+            length--;
+        }
+
+        return length;
+    }
+};
 
 class Request 
 {
@@ -155,12 +162,12 @@ public:
     int b;
     Operation op;
     SOCKET clientSocket;
-    std::shared_ptr<JOB_RESPONSE_QUEUE> job_resp_queue_ptr;
+    std::shared_ptr<JobResponseQueue> job_resp_queue_ptr;
 
     Request()
         : rid(0), a(0), b(0), op(PLUS), clientSocket(0) {}
 
-    Request(int rid, int a, int b, Operation op, SOCKET clientSocket, std::shared_ptr<JOB_RESPONSE_QUEUE> responseQueuePtr)
+    Request(int rid, int a, int b, Operation op, SOCKET clientSocket, std::shared_ptr<JobResponseQueue> responseQueuePtr)
         : rid(rid), a(a), b(b), op(op), clientSocket(clientSocket), job_resp_queue_ptr(responseQueuePtr) {}
 
     void displayInfo() 

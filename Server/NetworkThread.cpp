@@ -12,25 +12,13 @@ void printCharArray(const char* recvbuf, int recvbuflen)
     printf("\n");
 }
 
-int inputLength(char* msg)
-{
-    int length = strlen(msg);
-    if (length > 0 && msg[length - 1] == '\n') 
-    {
-        msg[length - 1] = '\0';
-        length--;
-    }
-
-    return length;
-}
-
 DWORD WINAPI networkThread(LPVOID lpParam)
 {
     PNTDATA ntData = (PNTDATA)lpParam; //server thread data
     int tid = ntData->tid;
     std::shared_ptr<SocketPool> spoolPtr = ntData->spoolPtr;
     std::shared_ptr<JOB_REQUEST_QUEUE> job_req_queue_ptr = ntData->request_queue_ptr;
-    std::shared_ptr<JOB_RESPONSE_QUEUE> job_resp_queue_ptr = std::make_shared<JOB_RESPONSE_QUEUE>();
+    std::shared_ptr<JobResponseQueue> job_resp_queue_ptr = std::make_shared<JobResponseQueue>();
 
     char recvbuf[DEFAULT_BUFLEN];
     int recvbuflen = DEFAULT_BUFLEN;
@@ -147,17 +135,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
         }
 
         // Send msg to clients
-        {
-            std::lock_guard<std::mutex> lock(job_resp_queue_ptr->mutex);
-            while (!job_resp_queue_ptr->response_queue.empty())
-            {
-                Response resp = job_resp_queue_ptr->response_queue.front();
-                job_resp_queue_ptr->response_queue.pop();
-
-                int iSendResult = send(resp.clientSocket, resp.resp_msg, inputLength(resp.resp_msg), 0);
-                printf("---------------\n\n");
-            }
-        }
+        job_resp_queue_ptr->sendMsgToClientsFromQueue();
 
         Sleep(1000);
     }

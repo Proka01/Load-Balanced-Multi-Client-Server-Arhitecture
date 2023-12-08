@@ -56,8 +56,8 @@ DWORD WINAPI workerThread(LPVOID lpParam)
                     printf("Unknown Operation\n");
             }
 
-            std::lock_guard<std::mutex> lock(req.job_resp_queue_ptr->mutex);
-            req.job_resp_queue_ptr->response_queue.push(resp);
+            //Add created response to its response_queue
+            req.job_resp_queue_ptr->addToQueue(resp);
         }
 
 
