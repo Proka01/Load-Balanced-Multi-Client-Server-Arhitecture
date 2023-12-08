@@ -54,7 +54,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
         }
 
         //result - number of sockets that want to be handled
-        int result = WSAPoll(pollfds.data(), pollfds.size(), 2000);
+        int result = WSAPoll(pollfds.data(), pollfds.size(), 100);
 
         if (result > 0) 
         {
@@ -140,7 +140,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
         // Send msg to clients
         job_resp_queue_ptr->sendMsgToClientsFromQueue();
 
-        Sleep(1000);
+        //Sleep(1000);
     }
     
     return 0;
