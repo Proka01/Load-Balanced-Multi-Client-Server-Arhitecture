@@ -6,7 +6,7 @@ DWORD WINAPI listenerThread(LPVOID lpParam)
 {
     PLTDATA ltData = (PLTDATA) lpParam;
     int tid = ltData->tid;
-    std::vector<std::shared_ptr<SOCKET_POOL>> spoolPtrs = ltData->spoolPtrs;
+    std::vector<std::shared_ptr<SocketPool>> spoolPtrs = ltData->spoolPtrs;
 
     //WSADATA wsaData;
     int iResult;
@@ -87,8 +87,7 @@ DWORD WINAPI listenerThread(LPVOID lpParam)
         int fewest_idx = -1;
         for (int i = 0; i < spoolPtrs.size(); i++)
         {
-            std::lock_guard<std::mutex> lock(spoolPtrs[i]->mutex);
-            if (spoolPtrs[i]->pool.size() < fewest)
+            if (spoolPtrs[i]->isPoolSizeLessThan(fewest))
             {
                 fewest = spoolPtrs[i]->pool.size();
                 fewest_idx = i;
@@ -97,8 +96,7 @@ DWORD WINAPI listenerThread(LPVOID lpParam)
 
         if (fewest_idx > -1)
         {
-            std::lock_guard<std::mutex> lock(spoolPtrs[fewest_idx]->mutex);
-            spoolPtrs[fewest_idx]->pool.push_back(ClientSocket);
+            spoolPtrs[fewest_idx]->put(ClientSocket);
         }
     }
 

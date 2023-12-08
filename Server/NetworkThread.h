@@ -8,7 +8,7 @@
 typedef struct NetworkThreadData 
 {
     int tid;
-    std::shared_ptr<SOCKET_POOL> spoolPtr;
+    std::shared_ptr<SocketPool> spoolPtr;
     std::shared_ptr<JOB_REQUEST_QUEUE> request_queue_ptr;
 } NTDATA, * PNTDATA;
 

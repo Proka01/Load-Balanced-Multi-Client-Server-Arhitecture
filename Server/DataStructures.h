@@ -27,16 +27,82 @@ enum Operation
     MOD = 4
 };
 
-typedef struct socket_pool 
-{
+//typedef struct socket_pool 
+//{
+//    int spid;
+//    std::vector<SOCKET> pool;
+//    std::mutex mutex;
+//
+//    socket_pool(int spid, const std::vector<SOCKET>& pool)
+//        : spid(spid), pool(pool), mutex() {}
+//
+//} SOCKET_POOL, * PSOCKET_POOL;
+
+class SocketPool {
+public:
     int spid;
     std::vector<SOCKET> pool;
     std::mutex mutex;
 
-    socket_pool(int spid, const std::vector<SOCKET>& pool)
+    SocketPool(int spid, const std::vector<SOCKET>& pool)
         : spid(spid), pool(pool), mutex() {}
 
-} SOCKET_POOL, * PSOCKET_POOL;
+    // Retrieve and remove the front element of the pool, if not empty.
+    SOCKET getAndPop(SOCKET& socket) 
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (!pool.empty()) 
+        {
+            SOCKET fd = pool.front();
+            pool.erase(pool.begin());
+            return fd; // Element retrieved and popped successfully.
+        }
+        return NULL; // Pool is empty.
+    }
+
+    // Add an element to the back of the pool.
+    void put(const SOCKET& fd) 
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        pool.push_back(fd);
+    }
+
+    bool isPoolSizeLessThan(int sz)
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        bool ret = pool.size() < sz;
+        return ret;
+    }
+
+    void printPoolSizeConcurently(int tid)
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        printf("NetworkThread%d: pool_size: %d\n", tid, pool.size());
+    }
+
+    void removeDisconectedSocketsFromPool(std::unordered_set<int> fds_idxs_to_remove)
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        std::vector<SOCKET> fds_idx_to_stay;
+
+        for (int i = 0; i < pool.size(); i++)
+        {
+            SOCKET fd = pool[i];
+
+            if (fds_idxs_to_remove.find(i) == fds_idxs_to_remove.end())
+            {
+                fds_idx_to_stay.push_back(fd);
+            }
+            else
+            {
+                closesocket(fd);
+            }
+        }
+
+        pool.clear();
+        pool = fds_idx_to_stay; // do i need to clear fds_idx_to_stay
+    }
+};
 
 typedef struct response 
 {

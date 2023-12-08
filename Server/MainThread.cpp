@@ -91,12 +91,12 @@ int main()
     }
 
     std::shared_ptr<JOB_REQUEST_QUEUE> job_request_queue_shared_ptr = std::make_shared<JOB_REQUEST_QUEUE>();
-    std::vector<std::shared_ptr<SOCKET_POOL>> socket_pool_ptrs;
+    std::vector<std::shared_ptr<SocketPool>> socket_pool_ptrs;
 
     //Init socket pools
     for (int i = 0; i < MAX_SOCKET_POOLS; i++)
     {
-        socket_pool_ptrs.push_back(std::make_shared<SOCKET_POOL>(i, std::vector<SOCKET>()));
+        socket_pool_ptrs.push_back(std::make_shared<SocketPool>(i, std::vector<SOCKET>()));
     }
 
     //Init pltDataArr

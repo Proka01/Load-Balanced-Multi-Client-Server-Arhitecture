@@ -28,7 +28,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
 {
     PNTDATA ntData = (PNTDATA)lpParam; //server thread data
     int tid = ntData->tid;
-    std::shared_ptr<SOCKET_POOL> spoolPtr = ntData->spoolPtr;
+    std::shared_ptr<SocketPool> spoolPtr = ntData->spoolPtr;
     std::shared_ptr<JOB_REQUEST_QUEUE> job_req_queue_ptr = ntData->request_queue_ptr;
     std::shared_ptr<JOB_RESPONSE_QUEUE> job_resp_queue_ptr = std::make_shared<JOB_RESPONSE_QUEUE>();
 
@@ -41,10 +41,10 @@ DWORD WINAPI networkThread(LPVOID lpParam)
     while (1)
     {
         {
-            std::lock_guard<std::mutex> lock(spoolPtr->mutex);
-            printf("NetworkThread%d: pool_size: %d\n", tid, spoolPtr->pool.size());
+            //just for monitoring results and debugging
+            spoolPtr->printPoolSizeConcurently(tid);
+            
             pollfds.clear();
-
             //add clientSockets from pool to pollfds structure
             for (int i = 0; i < spoolPtr->pool.size(); i++)
             {
@@ -130,26 +130,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
             //remove disconnected sockets from pool
             if (!fds_idxs_to_remove.empty())
             {
-                std::lock_guard<std::mutex> lock(spoolPtr->mutex);
-                std::vector<SOCKET> fds_idx_to_stay;
-
-                for (int i = 0; i < spoolPtr->pool.size(); i++)
-                {
-                    SOCKET fd = spoolPtr->pool[i];
-
-                    if (fds_idxs_to_remove.find(i) == fds_idxs_to_remove.end())
-                    {
-                        fds_idx_to_stay.push_back(fd);
-                    }
-                    else
-                    {
-                        closesocket(fd);
-                    }
-                }				
-
-                spoolPtr->pool.clear();
-                spoolPtr->pool = fds_idx_to_stay;
-
+                spoolPtr->removeDisconectedSocketsFromPool(fds_idxs_to_remove);
                 fds_idxs_to_remove.clear();
             }
             

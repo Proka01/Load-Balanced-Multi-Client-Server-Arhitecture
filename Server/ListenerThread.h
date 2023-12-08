@@ -13,7 +13,7 @@
 typedef struct ListenerThreadData 
 {
     int tid;
-    std::vector<std::shared_ptr<SOCKET_POOL>> spoolPtrs;
+    std::vector<std::shared_ptr<SocketPool>> spoolPtrs;
 } LTDATA, * PLTDATA;
 
 DWORD WINAPI listenerThread(LPVOID lpParam);
