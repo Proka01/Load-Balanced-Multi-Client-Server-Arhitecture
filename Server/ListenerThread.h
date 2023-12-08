@@ -10,7 +10,8 @@
 
 #define DEFAULT_PORT "27015"
 
-typedef struct ListenerThreadData {
+typedef struct ListenerThreadData 
+{
     int tid;
     std::vector<std::shared_ptr<SOCKET_POOL>> spoolPtrs;
 } LTDATA, * PLTDATA;

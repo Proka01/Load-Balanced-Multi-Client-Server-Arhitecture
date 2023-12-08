@@ -5,7 +5,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-typedef struct NetworkThreadData {
+typedef struct NetworkThreadData 
+{
     int tid;
     std::shared_ptr<SOCKET_POOL> spoolPtr;
     std::shared_ptr<JOB_REQUEST_QUEUE> request_queue_ptr;

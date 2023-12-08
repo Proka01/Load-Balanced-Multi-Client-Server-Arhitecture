@@ -18,7 +18,8 @@
 #define MAX_THREADS ((MAX_WORKER_THREADS) + (MAX_NETWORK_THREADS) + (MAX_LISTENER_THREADS))
 #define DEFAULT_BUFLEN 512
 
-enum Operation {
+enum Operation 
+{
     PLUS = 0,
     MINUS = 1,
     MUL = 2,
@@ -26,7 +27,8 @@ enum Operation {
     MOD = 4
 };
 
-typedef struct socket_pool {
+typedef struct socket_pool 
+{
     int spid;
     std::vector<SOCKET> pool;
     std::mutex mutex;
@@ -36,21 +38,24 @@ typedef struct socket_pool {
 
 } SOCKET_POOL, * PSOCKET_POOL;
 
-typedef struct response {
+typedef struct response 
+{
     int rid;
     int res;
     SOCKET clientSocket;
     char resp_msg[DEFAULT_BUFLEN];
 } RESPONSE;
 
-typedef struct job_response_queue {
+typedef struct job_response_queue 
+{
     std::queue<RESPONSE> response_queue;
     std::mutex mutex;
 
     job_response_queue() : response_queue(), mutex() {}
 } JOB_RESPONSE_QUEUE, * PJOB_RESPONSE_QUEUE;
 
-typedef struct request {
+typedef struct request 
+{
     int rid;
     int a;
     int b;
@@ -74,7 +79,8 @@ typedef struct request {
 
 } REQUEST;
 
-typedef struct job_request_queue {
+typedef struct job_request_queue 
+{
     std::queue<REQUEST> request_queue;
     std::mutex mutex;
 

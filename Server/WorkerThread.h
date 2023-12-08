@@ -4,7 +4,8 @@
 #include "DataStructures.h"
 #include <winsock2.h>
 
-typedef struct WorkerThreadData {
+typedef struct WorkerThreadData 
+{
     int tid;
     std::shared_ptr<JOB_REQUEST_QUEUE> request_queue_ptr;
 } WTDATA, * PWTDATA;

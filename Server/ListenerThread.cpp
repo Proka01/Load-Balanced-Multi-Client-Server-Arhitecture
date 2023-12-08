@@ -4,9 +4,9 @@
 
 DWORD WINAPI listenerThread(LPVOID lpParam)
 {
-	PLTDATA ltData = (PLTDATA) lpParam;
-	int tid = ltData->tid;
-	std::vector<std::shared_ptr<SOCKET_POOL>> spoolPtrs = ltData->spoolPtrs;
+    PLTDATA ltData = (PLTDATA) lpParam;
+    int tid = ltData->tid;
+    std::vector<std::shared_ptr<SOCKET_POOL>> spoolPtrs = ltData->spoolPtrs;
 
     //WSADATA wsaData;
     int iResult;
@@ -17,15 +17,6 @@ DWORD WINAPI listenerThread(LPVOID lpParam)
     struct addrinfo* result = NULL;
     struct addrinfo hints;
 
-    // Initialize Winsock
-    /*
-    iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (iResult != 0) {
-        printf("WSAStartup failed with error: %d\n", iResult);
-        return 1;
-    }
-    */
-
     //Windows API macro used to set a block of memory to zero
     ZeroMemory(&hints, sizeof(hints));
     hints.ai_family = AF_INET;
@@ -35,7 +26,8 @@ DWORD WINAPI listenerThread(LPVOID lpParam)
 
     // Resolve the server address and port
     iResult = getaddrinfo(NULL, DEFAULT_PORT, &hints, &result);
-    if (iResult != 0) {
+    if (iResult != 0) 
+    {
         printf("getaddrinfo failed with error: %d\n", iResult);
         WSACleanup();
         return 1;
@@ -43,7 +35,8 @@ DWORD WINAPI listenerThread(LPVOID lpParam)
 
     // Create a SOCKET for the server to listen for client connections.
     ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
-    if (ListenSocket == INVALID_SOCKET) {
+    if (ListenSocket == INVALID_SOCKET) 
+    {
         printf("socket failed with error: %ld\n", WSAGetLastError());
         freeaddrinfo(result);
         WSACleanup();
@@ -52,7 +45,8 @@ DWORD WINAPI listenerThread(LPVOID lpParam)
 
     // Setup the TCP listening socket
     iResult = bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen);
-    if (iResult == SOCKET_ERROR) {
+    if (iResult == SOCKET_ERROR) 
+    {
         printf("bind failed with error: %d\n", WSAGetLastError());
         freeaddrinfo(result);
         closesocket(ListenSocket);
@@ -64,7 +58,8 @@ DWORD WINAPI listenerThread(LPVOID lpParam)
 
     //Start listening for client connections
     iResult = listen(ListenSocket, SOMAXCONN);
-    if (iResult == SOCKET_ERROR) {
+    if (iResult == SOCKET_ERROR) 
+    {
         printf("listen failed with error: %d\n", WSAGetLastError());
         closesocket(ListenSocket);
         WSACleanup();
@@ -79,7 +74,8 @@ DWORD WINAPI listenerThread(LPVOID lpParam)
         ClientSocket = accept(ListenSocket, NULL, NULL);
 
         //Check for errors
-        if (ClientSocket == INVALID_SOCKET) {
+        if (ClientSocket == INVALID_SOCKET) 
+        {
             printf("accept failed with error: %d\n", WSAGetLastError());
             closesocket(ListenSocket);
             WSACleanup();
