@@ -38,7 +38,8 @@ enum Operation
 //
 //} SOCKET_POOL, * PSOCKET_POOL;
 
-class SocketPool {
+class SocketPool 
+{
 public:
     int spid;
     std::vector<SOCKET> pool;
@@ -104,7 +105,8 @@ public:
     }
 };
 
-class Response {
+class Response 
+{
 public:
     int rid;
     int res;
@@ -120,21 +122,48 @@ typedef struct job_response_queue
     job_response_queue() : response_queue(), mutex() {}
 } JOB_RESPONSE_QUEUE, * PJOB_RESPONSE_QUEUE;
 
-typedef struct request 
+//typedef struct request 
+//{
+//    int rid;
+//    int a;
+//    int b;
+//    enum Operation op;
+//    SOCKET clientSocket;
+////    std::shared_ptr<JOB_RESPONSE_QUEUE> job_resp_queue_ptr;
+//
+//    request() : rid(0), a(0), b(0), op(PLUS), clientSocket(0) {}
+//
+//    request(int rid, int a, int b, enum Operation op, SOCKET clientSocket, std::shared_ptr<JOB_RESPONSE_QUEUE> responseQueuePtr)
+//        : rid(rid), a(a), b(b), op(op), clientSocket(clientSocket), job_resp_queue_ptr(responseQueuePtr) {}
+//
+//    void displayInfo()
+//    {
+//        printf("Request ID: %d\n", rid);
+//        printf("Operand A: %d\n", a);
+//        printf("Operand B: %d\n", b);
+//        printf("Operation: %d\n", op);
+//        printf("Client Socket: %d\n", clientSocket);
+//    }
+//
+//} REQUEST;
+
+class Request 
 {
+public:
     int rid;
     int a;
     int b;
-    enum Operation op;
+    Operation op;
     SOCKET clientSocket;
     std::shared_ptr<JOB_RESPONSE_QUEUE> job_resp_queue_ptr;
 
-    request() : rid(0), a(0), b(0), op(PLUS), clientSocket(0) {}
+    Request()
+        : rid(0), a(0), b(0), op(PLUS), clientSocket(0) {}
 
-    request(int rid, int a, int b, enum Operation op, SOCKET clientSocket, std::shared_ptr<JOB_RESPONSE_QUEUE> responseQueuePtr)
+    Request(int rid, int a, int b, Operation op, SOCKET clientSocket, std::shared_ptr<JOB_RESPONSE_QUEUE> responseQueuePtr)
         : rid(rid), a(a), b(b), op(op), clientSocket(clientSocket), job_resp_queue_ptr(responseQueuePtr) {}
 
-    void displayInfo()
+    void displayInfo() 
     {
         printf("Request ID: %d\n", rid);
         printf("Operand A: %d\n", a);
@@ -142,12 +171,11 @@ typedef struct request
         printf("Operation: %d\n", op);
         printf("Client Socket: %d\n", clientSocket);
     }
-
-} REQUEST;
+};
 
 typedef struct job_request_queue 
 {
-    std::queue<REQUEST> request_queue;
+    std::queue<Request> request_queue;
     std::mutex mutex;
 
     job_request_queue() : request_queue(), mutex() {}

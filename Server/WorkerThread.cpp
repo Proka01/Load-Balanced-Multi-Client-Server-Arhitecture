@@ -10,7 +10,7 @@ DWORD WINAPI workerThread(LPVOID lpParam)
 
     while (1)
     {
-        REQUEST req;
+        Request req;
         int req_is_set = 0;
         {
             std::lock_guard<std::mutex> lock(job_req_queue_ptr->mutex);
