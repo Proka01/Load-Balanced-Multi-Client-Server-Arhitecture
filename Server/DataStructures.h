@@ -104,17 +104,17 @@ public:
     }
 };
 
-typedef struct response 
-{
+class Response {
+public:
     int rid;
     int res;
     SOCKET clientSocket;
     char resp_msg[DEFAULT_BUFLEN];
-} RESPONSE;
+};
 
 typedef struct job_response_queue 
 {
-    std::queue<RESPONSE> response_queue;
+    std::queue<Response> response_queue;
     std::mutex mutex;
 
     job_response_queue() : response_queue(), mutex() {}

@@ -151,7 +151,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
             std::lock_guard<std::mutex> lock(job_resp_queue_ptr->mutex);
             while (!job_resp_queue_ptr->response_queue.empty())
             {
-                RESPONSE resp = job_resp_queue_ptr->response_queue.front();
+                Response resp = job_resp_queue_ptr->response_queue.front();
                 job_resp_queue_ptr->response_queue.pop();
 
                 int iSendResult = send(resp.clientSocket, resp.resp_msg, inputLength(resp.resp_msg), 0);

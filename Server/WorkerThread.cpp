@@ -26,7 +26,7 @@ DWORD WINAPI workerThread(LPVOID lpParam)
 
         if (req_is_set)
         {
-            RESPONSE resp;
+            Response resp;
             resp.clientSocket = req.clientSocket;
             resp.rid = -1; //need to make global rid cnt, until than mock it to -1
 
