@@ -96,9 +96,6 @@ DWORD WINAPI networkThread(LPVOID lpParam)
                             //need global id counter, for now id mocked to -1
                             Request req(-1, a, b, static_cast<Operation> (op), ClientSocket, job_resp_queue_ptr);
 
-                            /*std::lock_guard<std::mutex> lock(job_req_queue_ptr->mutex);
-                            job_req_queue_ptr->request_queue.push(req);*/
-
                             //Add created request to queue, addToQueue is blocking call
                             job_req_queue_ptr->addToQueue(req);
                         }

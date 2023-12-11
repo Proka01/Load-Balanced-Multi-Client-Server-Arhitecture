@@ -29,17 +29,6 @@ enum Operation
     MOD = 4
 };
 
-//typedef struct socket_pool 
-//{
-//    int spid;
-//    std::vector<SOCKET> pool;
-//    std::mutex mutex;
-//
-//    socket_pool(int spid, const std::vector<SOCKET>& pool)
-//        : spid(spid), pool(pool), mutex() {}
-//
-//} SOCKET_POOL, * PSOCKET_POOL;
-
 class SocketPool 
 {
 public:
@@ -182,14 +171,6 @@ public:
     }
 };
 
-//typedef struct job_request_queue 
-//{
-//    std::queue<Request> request_queue;
-//    std::mutex mutex;
-//
-//    job_request_queue() : request_queue(), mutex() {}
-////} JOB_REQUEST_QUEUE, * PJOB_REQUEST_QUEUE;
-
 class JobRequestQueue {
 public:
     std::queue<Request> request_queue;
@@ -200,9 +181,6 @@ public:
 
     void addToQueue(Request req)
     {
-        /*std::lock_guard<std::mutex> lock(mutex);
-        request_queue.push(req);*/
-
         std::unique_lock<std::mutex> ul(mutex);
 
         // If more than JAM_LIMIT unprocessed items are in the request_queue, 
