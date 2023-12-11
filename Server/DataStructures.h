@@ -7,8 +7,9 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include <mutex>
+#include <condition_variable>
 #include <thread>
+#include <mutex>
 #include <unordered_set>
 
 #define MAX_SOCKET_POOLS 3
@@ -17,6 +18,7 @@
 #define MAX_LISTENER_THREADS 1
 #define MAX_THREADS ((MAX_WORKER_THREADS) + (MAX_NETWORK_THREADS) + (MAX_LISTENER_THREADS))
 #define DEFAULT_BUFLEN 512
+#define JAM_LIMIT 3
 
 enum Operation 
 {
@@ -192,26 +194,53 @@ class JobRequestQueue {
 public:
     std::queue<Request> request_queue;
     std::mutex mutex;
+    std::condition_variable consumerwait_cv;
 
-    JobRequestQueue() : request_queue(), mutex() {}
+    JobRequestQueue() : request_queue(), mutex(), consumerwait_cv(){}
 
     void addToQueue(Request req)
     {
-        std::lock_guard<std::mutex> lock(mutex);
+        /*std::lock_guard<std::mutex> lock(mutex);
+        request_queue.push(req);*/
+
+        std::unique_lock<std::mutex> ul(mutex);
+
+        // If more than JAM_LIMIT unprocessed items are in the request_queue, 
+        // wait for sometime (some requests will be procesed and poped from queue) before adding more
+        if (request_queue.size() >= JAM_LIMIT)
+        {
+            //it will stay blocked until request_queue.size() becomes less than JAM_LIMIT
+            consumerwait_cv.wait(ul, [this]() {return !(request_queue.size() >= JAM_LIMIT); });
+        }
+
         request_queue.push(req);
+
+        // Unlock the lock and notify the one consumer that one new data is available
+        ul.unlock();
+        consumerwait_cv.notify_one();
     }
 
-    Request* getRequestFromQueue()
+    Request getRequestFromQueue()
     {
-        std::lock_guard<std::mutex> lock(mutex);
-        //printf("Worker%d: %d\n", tid, job_req_queue_ptr->request_queue.size());
+        std::unique_lock<std::mutex> ul(mutex);
 
-        Request* req = NULL;
-        if (!request_queue.empty())
+        //if request_queue is empty, block (wait) until producer (NetworkThread) adds something to it
+        if (request_queue.empty())
         {
-            *req = request_queue.front();
-            request_queue.pop();
+            // Predicate should return false to continue waiting. 
+            // Thus, if the queue is empty, predicate should return false (!q.empty())
+            consumerwait_cv.wait(ul, [this]() {return !request_queue.empty(); });
         }
+
+        // Unlock the lock to unblock the producer. 
+        ul.unlock();
+
+        //There is some reuest to be handeled, consumer (WorkerThread) will unblock and handle it
+        Request req = request_queue.front();
+        request_queue.pop();
+
+        // Tell the producers that they can go ahead, since 1 element is now popped off for processing
+        consumerwait_cv.notify_all();
 
         return req;
     }

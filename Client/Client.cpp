@@ -204,11 +204,12 @@ int __cdecl main(int argc, char** argv)
         }
 
         //Read msg from server
+        memset(recvbuf, 0, sizeof(recvbuf));
         iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
         if (iResult > 0)
         {
             //printf("Bytes received: %d\n", iResult);
-            printf("Server echoed: ");
+            //printf("Server echoed: ");
             printCharArray(recvbuf, iResult);
             printf("------------------\n\n");
         }

@@ -24,6 +24,8 @@ DWORD WINAPI networkThread(LPVOID lpParam)
     int recvbuflen = DEFAULT_BUFLEN;
     int iResult;
 
+    memset(recvbuf, 0, sizeof(recvbuf));
+
     std::vector<struct pollfd> pollfds;
     std::unordered_set<int> fds_idxs_to_remove;
     while (1)
@@ -66,6 +68,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
                     SOCKET ClientSocket = pollfds[i].fd;
 
                     //Read msg from Client
+                    memset(recvbuf, 0, sizeof(recvbuf));
                     iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
 
                     if (strstr(recvbuf, "terminate") != NULL)
@@ -96,7 +99,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
                             /*std::lock_guard<std::mutex> lock(job_req_queue_ptr->mutex);
                             job_req_queue_ptr->request_queue.push(req);*/
 
-                            //Add created request to queue
+                            //Add created request to queue, addToQueue is blocking call
                             job_req_queue_ptr->addToQueue(req);
                         }
                         else {
