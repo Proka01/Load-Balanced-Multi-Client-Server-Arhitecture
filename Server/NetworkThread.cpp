@@ -12,6 +12,17 @@ void printCharArray(const char* recvbuf, int recvbuflen)
     printf("\n");
 }
 
+std::unordered_set<int> fds_idxs_to_remove;
+void removeDsiconectedOrDeadSocketFromPool(std::shared_ptr<SocketPool> spoolPtr)
+{
+    //remove disconnected sockets from pool
+    if (!fds_idxs_to_remove.empty())
+    {
+        spoolPtr->removeDisconectedSocketsFromPool(fds_idxs_to_remove);
+        fds_idxs_to_remove.clear();
+    }
+}
+
 DWORD WINAPI networkThread(LPVOID lpParam)
 {
     PNTDATA ntData = (PNTDATA)lpParam; //server thread data
@@ -27,7 +38,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
     memset(recvbuf, 0, sizeof(recvbuf));
 
     std::vector<struct pollfd> pollfds;
-    std::unordered_set<int> fds_idxs_to_remove;
+    
     while (1)
     {
         {
@@ -62,21 +73,20 @@ DWORD WINAPI networkThread(LPVOID lpParam)
         {
             for (int i = 0; i < pollfds.size(); ++i) 
             {
+                //see if client is dead
+                if (pollfds[i].revents & POLLHUP)
+                {
+                    printf("Should remove socket at index %d !!!!!!!!!!!!!!!!! \n", i);
+                    fds_idxs_to_remove.insert(i);
+                }
                 //see if revents is ready to hanle POLLIN (This socket is ready for recv)
-                if (pollfds[i].revents & POLLIN) 
+                else if (pollfds[i].revents & POLLIN) 
                 {
                     SOCKET ClientSocket = pollfds[i].fd;
 
                     //Read msg from Client
                     memset(recvbuf, 0, sizeof(recvbuf));
                     iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
-
-                    if (strstr(recvbuf, "terminate") != NULL)
-                    {
-                        printf("Termination signal received. Closing connection.!!!!!!!!!!!!!!!!!!!!!!!\n");
-                        fds_idxs_to_remove.insert(i);
-                        //printf("[removed idx-fd: %d-%d]\n",i, pollfds[i].fd);
-                    }
 
                     if (iResult > 0) 
                     {
@@ -110,6 +120,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
                     }
                     else 
                     {
+                        
                         printf("recv failed with error: %d\n", WSAGetLastError());
                         closesocket(ClientSocket);
                         return 1;
@@ -119,12 +130,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
             }
 
             //remove disconnected sockets from pool
-            if (!fds_idxs_to_remove.empty())
-            {
-                spoolPtr->removeDisconectedSocketsFromPool(fds_idxs_to_remove);
-                fds_idxs_to_remove.clear();
-            }
-            
+            removeDsiconectedOrDeadSocketFromPool(spoolPtr);
         }
         // Timeout occurred
         else if (result == 0) 

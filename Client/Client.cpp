@@ -63,12 +63,12 @@ int inputLength(char* msg)
 SOCKET ConnectSocket = INVALID_SOCKET;
 void handleSignal(int signal)
 {
-    size_t len = strlen("terminate");
+    /*size_t len = strlen("terminate");
     int iResult = send(ConnectSocket, "terminate", len, 0);
     if (iResult == SOCKET_ERROR) 
     {
         printf("send failed with error: %d\n", WSAGetLastError());    
-    }
+    }*/
 
     // Shutdown the socket before cleanup
     shutdown(ConnectSocket, SD_BOTH);
