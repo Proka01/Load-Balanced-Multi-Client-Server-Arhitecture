@@ -32,6 +32,11 @@ HANDLE  hNetworkThreadIdArr[MAX_NETWORK_THREADS];
 DWORD   dwWorkerThreadIdArr[MAX_WORKER_THREADS];
 HANDLE  hWorkerThreadArr[MAX_WORKER_THREADS];
 
+void testOpenSslLibs()
+{
+
+}
+
 void handleSignal(int signal)
 {
     // Close all ListenerThreads handles and free memory allocations.
