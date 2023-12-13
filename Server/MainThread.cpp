@@ -15,6 +15,10 @@
 #include <stdlib.h>
 #include <signal.h>
 
+#include <openssl/sha.h>
+#include <iomanip>
+#include <sstream>
+
 // Need to link with Ws2_32.lib
 #pragma comment (lib, "Ws2_32.lib")
 // #pragma comment (lib, "Mswsock.lib")
@@ -32,9 +36,28 @@ HANDLE  hNetworkThreadIdArr[MAX_NETWORK_THREADS];
 DWORD   dwWorkerThreadIdArr[MAX_WORKER_THREADS];
 HANDLE  hWorkerThreadArr[MAX_WORKER_THREADS];
 
+std::string sha256(const std::string& input) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, input.c_str(), input.length());
+    SHA256_Final(hash, &sha256);
+
+    std::stringstream ss;
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
+    }
+
+    return ss.str();
+}
+
 void testOpenSslLibs()
 {
+    std::string input = "Hello, World!";
+    std::string hashed = sha256(input);
 
+    std::cout << "Input: " << input << "\n";
+    std::cout << "SHA256 Hash: " << sha256(input) << "\n\n";
 }
 
 void handleSignal(int signal)
@@ -78,6 +101,7 @@ void handleSignal(int signal)
 int main()
 {
     printf("<-- SERVER --> \n\n");
+    testOpenSslLibs();
 
     // Register signal handler for Ctrl+C (SIGINT)
     signal(SIGINT, handleSignal);
