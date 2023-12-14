@@ -9,7 +9,7 @@ typedef struct NetworkThreadData
 {
     int tid;
     std::shared_ptr<SocketPool> spoolPtr;
-    std::shared_ptr<JobRequestQueue> request_queue_ptr;
+    std::shared_ptr<ProducerConsumerQueue<Request>> request_queue_ptr;
 } NTDATA, * PNTDATA;
 
 DWORD WINAPI networkThread(LPVOID lpParam);

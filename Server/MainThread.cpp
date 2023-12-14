@@ -119,7 +119,7 @@ int main()
         return 1;
     }
 
-    std::shared_ptr<JobRequestQueue> job_request_queue_shared_ptr = std::make_shared<JobRequestQueue>();
+    std::shared_ptr<ProducerConsumerQueue<Request>> job_request_queue_shared_ptr = std::make_shared<ProducerConsumerQueue<Request>>(JAM_LIMIT);
     std::vector<std::shared_ptr<SocketPool>> socket_pool_ptrs;
 
     //Init socket pools

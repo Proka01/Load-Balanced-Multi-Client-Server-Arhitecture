@@ -42,12 +42,13 @@ DWORD WINAPI workerThread(LPVOID lpParam)
 {
     PWTDATA wtData = (PWTDATA)lpParam; //server thread data
     int tid = wtData->tid;
-    std::shared_ptr<JobRequestQueue> job_req_queue_ptr = wtData->request_queue_ptr;
+    //std::shared_ptr<JobRequestQueue> job_req_queue_ptr = wtData->request_queue_ptr;
+    std::shared_ptr<ProducerConsumerQueue<Request>> job_req_queue_ptr = wtData->request_queue_ptr;
 
     while (1)
     {
         //getRequestFromQueue is blocking call
-        Request req = job_req_queue_ptr->getRequestFromQueue();
+        Request req = job_req_queue_ptr->popAndGet();
         Response resp = generateReponse(req);
 
         //Add created response to its response_queue

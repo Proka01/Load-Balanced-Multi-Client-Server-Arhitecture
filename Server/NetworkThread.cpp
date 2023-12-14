@@ -42,7 +42,8 @@ std::vector<struct pollfd> generatePollFdsVector(std::shared_ptr<SocketPool> spo
     return pollfds;
 }
 
-void recvMsgFromClientAndPushRequestToJobQueue(std::shared_ptr<JobRequestQueue> job_req_queue_ptr, std::shared_ptr<JobResponseQueue> job_resp_queue_ptr, 
+//std::shared_ptr<JobRequestQueue> job_req_queue_ptr
+void recvMsgFromClientAndPushRequestToJobQueue(std::shared_ptr<ProducerConsumerQueue<Request>> job_req_queue_ptr, std::shared_ptr<JobResponseQueue> job_resp_queue_ptr,
     std::vector<struct pollfd> pollfds, int i, int tid)
 {
     char recvbuf[DEFAULT_BUFLEN];
@@ -74,7 +75,7 @@ void recvMsgFromClientAndPushRequestToJobQueue(std::shared_ptr<JobRequestQueue> 
             Request req(-1, a, b, static_cast<Operation> (op), ClientSocket, job_resp_queue_ptr);
 
             //Add created request to queue, addToQueue is blocking call
-            job_req_queue_ptr->addToQueue(req);
+            job_req_queue_ptr->add(req);
         }
         else {
             // Failed to parse the string
@@ -99,7 +100,8 @@ DWORD WINAPI networkThread(LPVOID lpParam)
     PNTDATA ntData = (PNTDATA)lpParam; //server thread data
     int tid = ntData->tid;
     std::shared_ptr<SocketPool> spoolPtr = ntData->spoolPtr;
-    std::shared_ptr<JobRequestQueue> job_req_queue_ptr = ntData->request_queue_ptr;
+    //std::shared_ptr<JobRequestQueue> job_req_queue_ptr = ntData->request_queue_ptr; 
+    std::shared_ptr<ProducerConsumerQueue<Request>> job_req_queue_ptr = ntData->request_queue_ptr;
     std::shared_ptr<JobResponseQueue> job_resp_queue_ptr = std::make_shared<JobResponseQueue>();
 
     char recvbuf[DEFAULT_BUFLEN];

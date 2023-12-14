@@ -11,6 +11,7 @@
 #include <thread>
 #include <mutex>
 #include <unordered_set>
+#include <semaphore>
 
 #define MAX_SOCKET_POOLS 3
 #define MAX_WORKER_THREADS 3
@@ -224,5 +225,44 @@ public:
     }
 };
 
+template <typename T>
+class ProducerConsumerQueue {
+public:
+    ProducerConsumerQueue(int limit) : jamLimit(limit), prodConQueue(), full(0), empty(limit), mutex() {}
+
+    ~ProducerConsumerQueue() {}
+
+    void add(T item) 
+    {
+        empty.acquire();
+        std::unique_lock<std::mutex> ul(mutex);
+
+        prodConQueue.push(item);
+
+        ul.unlock();
+        full.release();
+    }
+
+    T popAndGet() 
+    {
+        full.acquire();
+        std::unique_lock<std::mutex> ul(mutex);
+
+        T item = prodConQueue.front();
+        prodConQueue.pop();
+
+        ul.unlock();
+        empty.release();
+
+        return item;
+    }
+
+private:
+    int jamLimit;
+    std::queue<T> prodConQueue;
+    std::counting_semaphore<INT_MAX> full;
+    std::counting_semaphore<INT_MAX> empty;
+    std::mutex mutex;
+};
 
 #endif // DATA_STRUCTURES_H
