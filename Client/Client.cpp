@@ -8,6 +8,11 @@
 #include <time.h>
 #include <signal.h>
 
+#include <iostream>
+#include <openssl/sha.h>
+#include <iomanip>
+#include <sstream>
+
 
 // Need to link with Ws2_32.lib, Mswsock.lib, and Advapi32.lib
 #pragma comment (lib, "Ws2_32.lib")
@@ -38,6 +43,30 @@
 * // Connect to the server
 *   if (connect(clientSocket, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr)) == SOCKET_ERROR){...}
 */
+
+std::string sha256(const std::string& input) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, input.c_str(), input.length());
+    SHA256_Final(hash, &sha256);
+
+    std::stringstream ss;
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
+    }
+
+    return ss.str();
+}
+
+void testOpenSslLibs()
+{
+    std::string input = "Hello, World!";
+    std::string hashed = sha256(input);
+
+    std::cout << "Input: " << input << "\n";
+    std::cout << "SHA256 Hash: " << sha256(input) << "\n\n";
+}
 
 void printCharArray(const char* recvbuf, int recvbuflen) 
 {
@@ -86,6 +115,7 @@ int generateRandomNumber(int min, int max)
 int __cdecl main(int argc, char** argv)
 {
     printf("CLIENT\n\n");
+    testOpenSslLibs();
     srand((unsigned int)time(NULL));
 
     // Register signal handler for Ctrl+C (SIGINT)

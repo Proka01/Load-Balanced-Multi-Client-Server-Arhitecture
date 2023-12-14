@@ -12,8 +12,19 @@ void printCharArray(const char* recvbuf, int recvbuflen)
     printf("\n");
 }
 
-std::unordered_set<int> fds_idxs_to_remove;
-void removeDsiconectedOrDeadSocketFromPool(std::shared_ptr<SocketPool> spoolPtr)
+int inputLength(char* msg)
+{
+    int length = strlen(msg);
+    if (length > 0 && msg[length - 1] == '\n')
+    {
+        msg[length - 1] = '\0';
+        length--;
+    }
+
+    return length;
+}
+
+void removeDsiconectedOrDeadSocketFromPool(std::shared_ptr<SocketPool> spoolPtr, std::unordered_set<int> fds_idxs_to_remove)
 {
     //remove disconnected sockets from pool
     if (!fds_idxs_to_remove.empty())
@@ -42,7 +53,7 @@ std::vector<struct pollfd> generatePollFdsVector(std::shared_ptr<SocketPool> spo
     return pollfds;
 }
 
-void recvMsgFromClientAndPushRequestToJobQueue(std::shared_ptr<JobRequestQueue> job_req_queue_ptr, std::shared_ptr<JobResponseQueue> job_resp_queue_ptr, 
+void recvMsgFromClientAndPushRequestToJobQueue(std::shared_ptr<ProducerConsumerQueue<Request>> job_req_queue_ptr, std::shared_ptr<ProducerConsumerQueue<Response>> job_resp_queue_ptr,
     std::vector<struct pollfd> pollfds, int i, int tid)
 {
     char recvbuf[DEFAULT_BUFLEN];
@@ -74,7 +85,7 @@ void recvMsgFromClientAndPushRequestToJobQueue(std::shared_ptr<JobRequestQueue> 
             Request req(-1, a, b, static_cast<Operation> (op), ClientSocket, job_resp_queue_ptr);
 
             //Add created request to queue, addToQueue is blocking call
-            job_req_queue_ptr->addToQueue(req);
+            job_req_queue_ptr->add(req);
         }
         else {
             // Failed to parse the string
@@ -93,14 +104,25 @@ void recvMsgFromClientAndPushRequestToJobQueue(std::shared_ptr<JobRequestQueue> 
     }
 }
 
+void sendMsgToClients(std::shared_ptr<ProducerConsumerQueue<Response>> job_resp_queue_ptr)
+{
+    while (!job_resp_queue_ptr->isEmpty())
+    {
+        Response resp = job_resp_queue_ptr->popAndGet();
+
+        int iSendResult = send(resp.clientSocket, resp.resp_msg, inputLength(resp.resp_msg), 0);
+        printf("---------------\n\n");
+    }
+}
 
 DWORD WINAPI networkThread(LPVOID lpParam)
 {
     PNTDATA ntData = (PNTDATA)lpParam; //server thread data
     int tid = ntData->tid;
     std::shared_ptr<SocketPool> spoolPtr = ntData->spoolPtr;
-    std::shared_ptr<JobRequestQueue> job_req_queue_ptr = ntData->request_queue_ptr;
-    std::shared_ptr<JobResponseQueue> job_resp_queue_ptr = std::make_shared<JobResponseQueue>();
+    std::shared_ptr<ProducerConsumerQueue<Request>> job_req_queue_ptr = ntData->request_queue_ptr;
+    std::shared_ptr<ProducerConsumerQueue<Response>> job_resp_queue_ptr = std::make_shared<ProducerConsumerQueue<Response>>(JAM_LIMIT);
+    std::unordered_set<int> fds_idxs_to_remove;
 
     char recvbuf[DEFAULT_BUFLEN];
     int recvbuflen = DEFAULT_BUFLEN;
@@ -120,7 +142,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
         //so if pollfds is empty continue to next iteration
         if (pollfds.empty())
         {
-            Sleep(1000);
+            Sleep(100);
             continue;
         }
 
@@ -145,7 +167,8 @@ DWORD WINAPI networkThread(LPVOID lpParam)
             }
 
             //remove disconnected sockets from pool
-            removeDsiconectedOrDeadSocketFromPool(spoolPtr);
+            removeDsiconectedOrDeadSocketFromPool(spoolPtr, fds_idxs_to_remove);
+            fds_idxs_to_remove.clear();
         }
         // Timeout occurred
         else if (result == 0) 
@@ -159,7 +182,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
         }
 
         // Send msg to clients
-        job_resp_queue_ptr->sendMsgToClientsFromQueue();
+        sendMsgToClients(job_resp_queue_ptr);
 
         //Sleep(1000);
     }
