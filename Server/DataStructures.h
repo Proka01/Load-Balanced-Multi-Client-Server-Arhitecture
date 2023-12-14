@@ -30,6 +30,69 @@ enum Operation
     MOD = 4
 };
 
+template <typename T>
+class ProducerConsumerQueue {
+public:
+    ProducerConsumerQueue(int limit) : jamLimit(limit), prodConQueue(), full(0), empty(limit), mutex() {}
+
+    ~ProducerConsumerQueue() {}
+
+    void add(T item)
+    {
+        empty.acquire();
+        std::unique_lock<std::mutex> ul(mutex);
+
+        prodConQueue.push(item);
+
+        ul.unlock();
+        full.release();
+    }
+
+    T popAndGet()
+    {
+        full.acquire();
+        std::unique_lock<std::mutex> ul(mutex);
+
+        T item = prodConQueue.front();
+        prodConQueue.pop();
+
+        ul.unlock();
+        empty.release();
+
+        return item;
+    }
+
+    bool isEmpty()
+    {
+        std::unique_lock<std::mutex> ul(mutex);
+        bool empty = prodConQueue.empty();
+        ul.unlock();
+
+        return empty;
+    }
+
+    int getSize()
+    {
+        std::unique_lock<std::mutex> ul(mutex);
+        int size = prodConQueue.size();
+        ul.unlock();
+
+        return size;
+    }
+
+    std::mutex getMutex()
+    {
+        return mutex;
+    }
+
+private:
+    int jamLimit;
+    std::queue<T> prodConQueue;
+    std::counting_semaphore<INT_MAX> full;
+    std::counting_semaphore<INT_MAX> empty;
+    std::mutex mutex;
+};
+
 class SocketPool 
 {
 public:
@@ -106,46 +169,6 @@ public:
     char resp_msg[DEFAULT_BUFLEN];
 };
 
-class JobResponseQueue {
-public:
-    std::queue<Response> response_queue;
-    std::mutex mutex;
-
-    JobResponseQueue() : response_queue(), mutex() {}
-
-    void sendMsgToClientsFromQueue()
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        while (!response_queue.empty())
-        {
-            Response resp = response_queue.front();
-            response_queue.pop();
-
-            int iSendResult = send(resp.clientSocket, resp.resp_msg, inputLength(resp.resp_msg), 0);
-            printf("---------------\n\n");
-        }
-    }
-
-    void addToQueue(Response resp)
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        response_queue.push(resp);
-    }
-
-private:
-    int inputLength(char* msg)
-    {
-        int length = strlen(msg);
-        if (length > 0 && msg[length - 1] == '\n')
-        {
-            msg[length - 1] = '\0';
-            length--;
-        }
-
-        return length;
-    }
-};
-
 class Request 
 {
 public:
@@ -154,12 +177,12 @@ public:
     int b;
     Operation op;
     SOCKET clientSocket;
-    std::shared_ptr<JobResponseQueue> job_resp_queue_ptr;
+    std::shared_ptr<ProducerConsumerQueue<Response>> job_resp_queue_ptr;
 
     Request()
         : rid(0), a(0), b(0), op(PLUS), clientSocket(0) {}
 
-    Request(int rid, int a, int b, Operation op, SOCKET clientSocket, std::shared_ptr<JobResponseQueue> responseQueuePtr)
+    Request(int rid, int a, int b, Operation op, SOCKET clientSocket, std::shared_ptr<ProducerConsumerQueue<Response>> responseQueuePtr)
         : rid(rid), a(a), b(b), op(op), clientSocket(clientSocket), job_resp_queue_ptr(responseQueuePtr) {}
 
     void displayInfo() 
@@ -170,99 +193,6 @@ public:
         printf("Operation: %d\n", op);
         printf("Client Socket: %d\n", clientSocket);
     }
-};
-
-class JobRequestQueue {
-public:
-    std::queue<Request> request_queue;
-    std::mutex mutex;
-    std::condition_variable consumerwait_cv;
-
-    JobRequestQueue() : request_queue(), mutex(), consumerwait_cv(){}
-
-    void addToQueue(Request req)
-    {
-        std::unique_lock<std::mutex> ul(mutex);
-
-        // If more than JAM_LIMIT unprocessed items are in the request_queue, 
-        // wait for sometime (some requests will be procesed and poped from queue) before adding more
-        if (request_queue.size() >= JAM_LIMIT)
-        {
-            //it will stay blocked until request_queue.size() becomes less than JAM_LIMIT
-            consumerwait_cv.wait(ul, [this]() {return !(request_queue.size() >= JAM_LIMIT); });
-        }
-
-        request_queue.push(req);
-
-        // Unlock the lock and notify the one consumer that one new data is available
-        ul.unlock();
-        consumerwait_cv.notify_one();
-    }
-
-    Request getRequestFromQueue()
-    {
-        std::unique_lock<std::mutex> ul(mutex);
-
-        //if request_queue is empty, block (wait) until producer (NetworkThread) adds something to it
-        if (request_queue.empty())
-        {
-            // Predicate should return false to continue waiting. 
-            // Thus, if the queue is empty, predicate should return false (!q.empty())
-            consumerwait_cv.wait(ul, [this]() {return !request_queue.empty(); });
-        }
-
-        // Unlock the lock to unblock the producer. 
-        ul.unlock();
-
-        //There is some reuest to be handeled, consumer (WorkerThread) will unblock and handle it
-        Request req = request_queue.front();
-        request_queue.pop();
-
-        // Tell the producers that they can go ahead, since 1 element is now popped off for processing
-        consumerwait_cv.notify_all();
-
-        return req;
-    }
-};
-
-template <typename T>
-class ProducerConsumerQueue {
-public:
-    ProducerConsumerQueue(int limit) : jamLimit(limit), prodConQueue(), full(0), empty(limit), mutex() {}
-
-    ~ProducerConsumerQueue() {}
-
-    void add(T item) 
-    {
-        empty.acquire();
-        std::unique_lock<std::mutex> ul(mutex);
-
-        prodConQueue.push(item);
-
-        ul.unlock();
-        full.release();
-    }
-
-    T popAndGet() 
-    {
-        full.acquire();
-        std::unique_lock<std::mutex> ul(mutex);
-
-        T item = prodConQueue.front();
-        prodConQueue.pop();
-
-        ul.unlock();
-        empty.release();
-
-        return item;
-    }
-
-private:
-    int jamLimit;
-    std::queue<T> prodConQueue;
-    std::counting_semaphore<INT_MAX> full;
-    std::counting_semaphore<INT_MAX> empty;
-    std::mutex mutex;
 };
 
 #endif // DATA_STRUCTURES_H

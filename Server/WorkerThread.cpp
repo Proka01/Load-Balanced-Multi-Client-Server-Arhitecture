@@ -42,7 +42,7 @@ DWORD WINAPI workerThread(LPVOID lpParam)
 {
     PWTDATA wtData = (PWTDATA)lpParam; //server thread data
     int tid = wtData->tid;
-    //std::shared_ptr<JobRequestQueue> job_req_queue_ptr = wtData->request_queue_ptr;
+    
     std::shared_ptr<ProducerConsumerQueue<Request>> job_req_queue_ptr = wtData->request_queue_ptr;
 
     while (1)
@@ -52,7 +52,7 @@ DWORD WINAPI workerThread(LPVOID lpParam)
         Response resp = generateReponse(req);
 
         //Add created response to its response_queue
-        req.job_resp_queue_ptr->addToQueue(resp);
+        req.job_resp_queue_ptr->add(resp);
     }
 
     
