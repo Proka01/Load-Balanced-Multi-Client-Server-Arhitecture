@@ -142,7 +142,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
         //so if pollfds is empty continue to next iteration
         if (pollfds.empty())
         {
-            Sleep(1000);
+            Sleep(100);
             continue;
         }
 

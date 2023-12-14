@@ -1,5 +1,4 @@
-#ifndef LISTENER_THREAD_H
-#define LISTENER_THREAD_H
+#pragma once
 
 #include "DataStructures.h"
 #include <winsock2.h>
@@ -17,6 +16,3 @@ typedef struct ListenerThreadData
 } LTDATA, * PLTDATA;
 
 DWORD WINAPI listenerThread(LPVOID lpParam);
-
-
-#endif // LISTENER_THREAD_H

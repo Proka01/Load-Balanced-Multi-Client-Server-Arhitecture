@@ -1,5 +1,4 @@
-#ifndef DATA_STRUCTURES_H
-#define DATA_STRUCTURES_H
+#pragma once
 
 #include <winsock2.h>
 #include <unordered_set>
@@ -194,5 +193,3 @@ public:
         printf("Client Socket: %d\n", clientSocket);
     }
 };
-
-#endif // DATA_STRUCTURES_H

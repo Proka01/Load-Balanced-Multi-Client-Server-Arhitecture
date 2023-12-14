@@ -1,5 +1,4 @@
-#ifndef WORKER_THREAD_H
-#define WORKER_THREAD_H
+#pragma once
 
 #include "DataStructures.h"
 #include <winsock2.h>
@@ -11,6 +10,3 @@ typedef struct WorkerThreadData
 } WTDATA, * PWTDATA;
 
 DWORD WINAPI workerThread(LPVOID lpParam);
-
-
-#endif // WORKER_THREAD_H

@@ -1,5 +1,4 @@
-#ifndef NETWORK_THREAD_H
-#define NETWORK_THREAD_H
+#pragma once
 
 #include "DataStructures.h"
 #include <winsock2.h>
@@ -13,6 +12,3 @@ typedef struct NetworkThreadData
 } NTDATA, * PNTDATA;
 
 DWORD WINAPI networkThread(LPVOID lpParam);
-
-
-#endif // NETWORK_THREAD_H
