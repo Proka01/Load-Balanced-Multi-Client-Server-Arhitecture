@@ -24,8 +24,7 @@ int inputLength(char* msg)
     return length;
 }
 
-std::unordered_set<int> fds_idxs_to_remove;
-void removeDsiconectedOrDeadSocketFromPool(std::shared_ptr<SocketPool> spoolPtr)
+void removeDsiconectedOrDeadSocketFromPool(std::shared_ptr<SocketPool> spoolPtr, std::unordered_set<int> fds_idxs_to_remove)
 {
     //remove disconnected sockets from pool
     if (!fds_idxs_to_remove.empty())
@@ -123,6 +122,7 @@ DWORD WINAPI networkThread(LPVOID lpParam)
     std::shared_ptr<SocketPool> spoolPtr = ntData->spoolPtr;
     std::shared_ptr<ProducerConsumerQueue<Request>> job_req_queue_ptr = ntData->request_queue_ptr;
     std::shared_ptr<ProducerConsumerQueue<Response>> job_resp_queue_ptr = std::make_shared<ProducerConsumerQueue<Response>>(JAM_LIMIT);
+    std::unordered_set<int> fds_idxs_to_remove;
 
     char recvbuf[DEFAULT_BUFLEN];
     int recvbuflen = DEFAULT_BUFLEN;
@@ -167,7 +167,8 @@ DWORD WINAPI networkThread(LPVOID lpParam)
             }
 
             //remove disconnected sockets from pool
-            removeDsiconectedOrDeadSocketFromPool(spoolPtr);
+            removeDsiconectedOrDeadSocketFromPool(spoolPtr, fds_idxs_to_remove);
+            fds_idxs_to_remove.clear();
         }
         // Timeout occurred
         else if (result == 0) 
