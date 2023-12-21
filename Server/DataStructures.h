@@ -252,35 +252,13 @@ class SocketPool
 {
 public:
     int spid;
-    //std::vector<SOCKET> pool;
+
     std::vector<std::shared_ptr<iConnection>> pool;
     std::mutex mutex;
-
-    /*SocketPool(int spid, const std::vector<SOCKET>& pool)
-        : spid(spid), pool(pool), mutex() {}*/
 
     SocketPool(int spid, const std::vector<std::shared_ptr<iConnection>>& pool)
         : spid(spid), pool(pool), mutex() {}
 
-    // Retrieve and remove the front element of the pool, if not empty.
-    //SOCKET getAndPop(SOCKET& socket) 
-    //{
-    //    std::lock_guard<std::mutex> lock(mutex);
-    //    if (!pool.empty()) 
-    //    {
-    //        SOCKET fd = pool.front();
-    //        pool.erase(pool.begin());
-    //        return fd; // Element retrieved and popped successfully.
-    //    }
-    //    return NULL; // Pool is empty.
-    //}
-
-    // Add an element to the back of the pool.
-    /*void put(const SOCKET& fd) 
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        pool.push_back(fd);
-    }*/
     void put(const std::shared_ptr<iConnection>& iConn)
     {
         std::lock_guard<std::mutex> lock(mutex);
@@ -299,29 +277,7 @@ public:
         std::lock_guard<std::mutex> lock(mutex);
         printf("NetworkThread%d: pool_size: %d\n", tid, pool.size());
     }
-
-    //void removeDisconectedSocketsFromPool(std::unordered_set<int> fds_idxs_to_remove)
-    //{
-    //    std::lock_guard<std::mutex> lock(mutex);
-    //    std::vector<SOCKET> fds_idx_to_stay;
-
-    //    for (int i = 0; i < pool.size(); i++)
-    //    {
-    //        SOCKET fd = pool[i];
-
-    //        if (fds_idxs_to_remove.find(i) == fds_idxs_to_remove.end())
-    //        {
-    //            fds_idx_to_stay.push_back(fd);
-    //        }
-    //        else
-    //        {
-    //            closesocket(fd);
-    //        }
-    //    }
-
-    //    pool.clear();
-    //    pool = fds_idx_to_stay; // do i need to clear fds_idx_to_stay
-    //}
+   
     void removeDisconectedSocketsFromPool(std::unordered_set<int> iConns_idxs_to_remove)
     {
         std::lock_guard<std::mutex> lock(mutex);
@@ -347,14 +303,6 @@ public:
     }
 };
 
-//class Response 
-//{
-//public:
-//    int rid;
-//    int res;
-//    SOCKET clientSocket;
-//    char resp_msg[DEFAULT_BUFLEN];
-//};
 
 class Response
 {
@@ -364,31 +312,6 @@ public:
     std::shared_ptr<iConnection> iConn;
     char resp_msg[DEFAULT_BUFLEN];
 };
-
-//class Request 
-//{
-//public:
-//    int rid;
-//    int a;
-//    int b;
-//    Operation op;
-//    SOCKET clientSocket;
-//    std::shared_ptr<ProducerConsumerQueue<Response>> job_resp_queue_ptr;
-//
-//    Request()
-//        : rid(0), a(0), b(0), op(PLUS), clientSocket(0) {}
-//
-//    Request(int rid, int a, int b, Operation op, SOCKET clientSocket, std::shared_ptr<ProducerConsumerQueue<Response>> responseQueuePtr)
-//        : rid(rid), a(a), b(b), op(op), clientSocket(clientSocket), job_resp_queue_ptr(responseQueuePtr) {}
-//
-//    void displayInfo() 
-//    {
-//        printf("Request ID: %d\n", rid);
-//        printf("Operand A: %d\n", a);
-//        printf("Operand B: %d\n", b);
-//        printf("Operation: %d\n", op);
-//        printf("Client Socket: %d\n", clientSocket);
-//    }
 
 
 class Request

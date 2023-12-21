@@ -125,7 +125,6 @@ int main()
     //Init socket pools
     for (int i = 0; i < MAX_SOCKET_POOLS; i++)
     {
-        //socket_pool_ptrs.push_back(std::make_shared<SocketPool>(i, std::vector<SOCKET>()));
         socket_pool_ptrs.push_back(std::make_shared<SocketPool>(i, std::vector<std::shared_ptr<iConnection>>()));
     }
 

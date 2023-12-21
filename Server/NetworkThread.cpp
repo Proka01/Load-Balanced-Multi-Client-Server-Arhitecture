@@ -58,58 +58,6 @@ std::vector<struct pollfd> generatePollFdsVector(std::shared_ptr<SocketPool> spo
     return pollfds;
 }
 
-/*
-void recvMsgFromClientAndPushRequestToJobQueue(std::shared_ptr<ProducerConsumerQueue<Request>> job_req_queue_ptr, std::shared_ptr<ProducerConsumerQueue<Response>> job_resp_queue_ptr,
-    std::vector<struct pollfd> pollfds, int i, int tid)
-{
-    char recvbuf[DEFAULT_BUFLEN];
-    int recvbuflen = DEFAULT_BUFLEN;
-    int iResult;
-
-    SOCKET ClientSocket = pollfds[i].fd;
-
-    //Read msg from Client
-    memset(recvbuf, 0, sizeof(recvbuf));
-    iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
-
-    if (iResult > 0)
-    {
-        printf("---------------\n");
-        printf("thread%d msg: ", tid);
-        printCharArray(recvbuf, iResult);
-
-        //parse message to request
-        //add request to job_request_queue
-        char clientName[50];
-        int a, b, op;
-        int parsed = sscanf_s(recvbuf, "%49[^-]-%d-%d-%d", clientName, sizeof(clientName), &a, &b, &op);
-
-        //Successfull parsing, create request and add it to job_request_queue
-        if (parsed == 4) {
-
-            //need global id counter, for now id mocked to -1
-            Request req(-1, a, b, static_cast<Operation> (op), ClientSocket, job_resp_queue_ptr);
-
-            //Add created request to queue, addToQueue is blocking call
-            job_req_queue_ptr->add(req);
-        }
-        else {
-            // Failed to parse the string
-            printf("Failed to parse the string.\n");
-        }
-    }
-    else if (iResult == 0)
-    {
-        printf("Connection closing...\n");
-    }
-    else
-    {
-
-        printf("recv failed with error: %d\n", WSAGetLastError());
-        closesocket(ClientSocket);
-    }
-}
-*/
 
 void readMsgFromClientAndPushRequestToJobQueue(std::shared_ptr<ProducerConsumerQueue<Request>> job_req_queue_ptr, 
     std::shared_ptr<ProducerConsumerQueue<Response>> job_resp_queue_ptr,std::shared_ptr<iConnection> iConn, int tid)
@@ -152,19 +100,6 @@ void readMsgFromClientAndPushRequestToJobQueue(std::shared_ptr<ProducerConsumerQ
         iConn->closeConnection();
     }
 }
-
-
-
-//void sendMsgToClients(std::shared_ptr<ProducerConsumerQueue<Response>> job_resp_queue_ptr)
-//{
-//    while (!job_resp_queue_ptr->isEmpty())
-//    {
-//        Response resp = job_resp_queue_ptr->popAndGet();
-//
-//        int iSendResult = send(resp.clientSocket, resp.resp_msg, inputLength(resp.resp_msg), 0);
-//        printf("---------------\n\n");
-//    }
-//}
 
 void sendMsgToClients(std::shared_ptr<ProducerConsumerQueue<Response>> job_resp_queue_ptr)
 {
