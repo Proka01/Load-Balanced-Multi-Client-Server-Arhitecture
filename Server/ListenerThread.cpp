@@ -96,7 +96,8 @@ DWORD WINAPI listenerThread(LPVOID lpParam)
 
         if (fewest_idx > -1)
         {
-            spoolPtrs[fewest_idx]->put(ClientSocket);
+            //TODO: regarding parametar make necrypt od unencrypt
+            spoolPtrs[fewest_idx]->put(std::make_shared<UnencryptedConn>(ClientSocket));
         }
     }
 

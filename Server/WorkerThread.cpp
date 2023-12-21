@@ -5,7 +5,8 @@
 Response generateReponse(Request req)
 {
     Response resp;
-    resp.clientSocket = req.clientSocket;
+    //resp.clientSocket = req.clientSocket;
+    resp.iConn = req.iConn;
     resp.rid = -1; //need to make global rid cnt, until than mock it to -1
 
     switch (req.op)
