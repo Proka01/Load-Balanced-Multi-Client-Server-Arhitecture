@@ -1,49 +1,6 @@
 #define WIN32_LEAN_AND_MEAN
 
-#include <windows.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <time.h>
-#include <signal.h>
-
-#include <iostream>
-#include <iomanip>
-#include <sstream>
-#include <string>
-
-#include <openssl/crypto.h>
-#include <openssl/x509.h>
-#include <openssl/pem.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-
-// Need to link with Ws2_32.lib, Mswsock.lib, and Advapi32.lib
-#pragma comment (lib, "Ws2_32.lib")
-#pragma comment (lib, "Mswsock.lib")
-#pragma comment (lib, "AdvApi32.lib")
-
-#define CHK_NULL(x) if ((x)==NULL) exit (1)
-#define CHK_ERR(err,s) if ((err)==-1) { perror(s); exit(1); }
-#define CHK_SSL(err) if ((err)==-1) { ERR_print_errors_fp(stderr); exit(2); }
-
-#define CERT_FILE "C:\\Users\\t-aprokic\\Desktop\\LBCertAndKeys\\client"
-#define KEY_FILE "C:\\Users\\t-aprokic\\Desktop\\LBCertAndKeys\\client"
-
-#define DEFAULT_BUFLEN 512
-#define DEFAULT_PORT "27015"
-#define MSG_LEN 100
-
-
-#define ENCRYPTION_TYPE 1
-
-enum EncryptionType
-{
-    UNENCRYPTED = 0,
-    ENCRYPTED = 1,
-    DEBUG = 2
-};
+#include "ClientDataStructures.h"
 
 /************************ DOCUMENTATION ABOUT USED FUNCTIONS ***************************
 *
@@ -110,6 +67,7 @@ int inputLength(char* msg)
     return length;
 }
 
+std::shared_ptr<iConnection> iConn;
 SOCKET ConnectSocket = INVALID_SOCKET;
 SSL_CTX* ctx;
 SSL* ssl;
@@ -118,14 +76,7 @@ void handleSignal(int signal)
     // Shutdown the socket before cleanup
     shutdown(ConnectSocket, SD_BOTH);
 
-    // Close the socket
-    closesocket(ConnectSocket);
-
-    if (ENCRYPTION_TYPE == ENCRYPTED)
-    {
-        SSL_free(ssl);
-        SSL_CTX_free(ctx);
-    }
+    iConn->closeConnection();
 
     // Cleanup Winsock
     WSACleanup(); 
@@ -190,14 +141,25 @@ int __cdecl main(int argc, char** argv)
     // Register signal handler for Ctrl+C (SIGINT)
     signal(SIGINT, handleSignal);
 
+    switch (ENCRYPTION_TYPE)
+    {
+        case UNENCRYPTED:
+            iConn = std::make_shared<UnencryptedConn>();
+            break;
+        case ENCRYPTED:
+            ctx = initSSLContext(argv[2]);
+            iConn = std::make_shared<EncryptedConn>(ctx);
+            break;
+        case DEBUG:
+            iConn = std::make_shared<UnencryptedConn>();
+            break;
+        default:
+            printf("Unknown ENCRYPTION_TYPE\n");
+    }
+
     WSADATA wsaData;
-    //SOCKET ConnectSocket = INVALID_SOCKET;
-    struct addrinfo* result = NULL, * ptr = NULL, hints;
-    const char* sendbuf = "this is a test";
-    char recvbuf[DEFAULT_BUFLEN];
-    int iResult;
-    int recvbuflen = DEFAULT_BUFLEN;
     char clientName[20];
+    int iResult;
 
 
     if (argc == 3)
@@ -223,77 +185,7 @@ int __cdecl main(int argc, char** argv)
         return 1;
     }
 
-    ZeroMemory(&hints, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
-
-    // Resolve the server address and port, argv[1] is host name or address (localhost in this case)
-    iResult = getaddrinfo(argv[1], DEFAULT_PORT, &hints, &result);
-    if (iResult != 0) 
-    {
-        printf("getaddrinfo failed with error: %d\n", iResult);
-        WSACleanup();
-        return 1;
-    }
-
-    // Attempt to connect to an address until one succeeds
-    for (ptr = result; ptr != NULL; ptr = ptr->ai_next) 
-    {
-
-        // Create a SOCKET for connecting to server
-        ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype,
-            ptr->ai_protocol);
-        if (ConnectSocket == INVALID_SOCKET) 
-        {
-            printf("socket failed with error: %ld\n", WSAGetLastError());
-            WSACleanup();
-            return 1;
-        }
-
-        // Connect to server.
-        iResult = connect(ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
-        if (iResult == SOCKET_ERROR) 
-        {
-            closesocket(ConnectSocket);
-            ConnectSocket = INVALID_SOCKET;
-            continue;
-        }
-        break;
-    }
-
-    /* Init openSSL application context*/
-    //SSL connect
-    if (ENCRYPTION_TYPE == ENCRYPTED)
-    {
-        ctx = initSSLContext(argv[2]);
-
-        ssl = SSL_new(ctx);               CHK_NULL(ssl);
-        SSL_set_fd(ssl, ConnectSocket);
-        iResult = SSL_connect(ssl);       CHK_SSL(iResult);
-    }
-
-    //debug
-    if (ENCRYPTION_TYPE == DEBUG)
-    {
-        ctx = initSSLContext(argv[2]);
-
-        ssl = SSL_new(ctx);               CHK_NULL(ssl);
-        printf("ctx setted successfully\n");
-        SSL_set_fd(ssl, ConnectSocket);
-        printf("ssl_set_fd success\n");
-        //iResult = SSL_connect(ssl);       CHK_SSL(iResult);
-    }
-    
-
-    freeaddrinfo(result);
-
-    if (ConnectSocket == INVALID_SOCKET) 
-    {
-        printf("Unable to connect to server!\n");
-        WSACleanup();
-        return 1;
-    }
+    ConnectSocket = iConn->iConnAccept(argv[1]);
 
     // Receive until the peer closes the connection
     do {
@@ -310,14 +202,7 @@ int __cdecl main(int argc, char** argv)
         size_t len = strlen(msg);
         printf("Sending [%s] to server\n", msg);
 
-        if (ENCRYPTION_TYPE == ENCRYPTED)
-        {
-            iResult = SSL_write(ssl, msg, len);  CHK_SSL(iResult);
-        }
-        else
-        {
-            iResult = send(ConnectSocket, msg, len, 0);
-        }
+        iResult = iConn->write(msg, len);
 
         if (iResult == SOCKET_ERROR) 
         {
@@ -328,23 +213,12 @@ int __cdecl main(int argc, char** argv)
         }
 
         //Read msg from server
-        memset(recvbuf, 0, sizeof(recvbuf));
-
-        if (ENCRYPTION_TYPE == ENCRYPTED)
-        {
-            iResult = SSL_read(ssl, recvbuf, sizeof(recvbuf) - 1);   CHK_SSL(iResult);
-            recvbuf[iResult] = '\0';
-        }
-        else
-        {
-            iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0); 
-        }
+        ReadResult readRes = iConn->read();
+        iResult = readRes.getBytesRead();
 
         if (iResult > 0)
         {
-            //printf("Bytes received: %d\n", iResult);
-            //printf("Server echoed: ");
-            printCharArray(recvbuf, iResult);
+            printCharArray(readRes.getContent(), iResult);
             printf("------------------\n\n");
         }
         else if (iResult == 0)
