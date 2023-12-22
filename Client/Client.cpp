@@ -9,20 +9,41 @@
 #include <signal.h>
 
 #include <iostream>
-#include <openssl/sha.h>
 #include <iomanip>
 #include <sstream>
+#include <string>
 
+#include <openssl/crypto.h>
+#include <openssl/x509.h>
+#include <openssl/pem.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 // Need to link with Ws2_32.lib, Mswsock.lib, and Advapi32.lib
 #pragma comment (lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
 #pragma comment (lib, "AdvApi32.lib")
 
+#define CHK_NULL(x) if ((x)==NULL) exit (1)
+#define CHK_ERR(err,s) if ((err)==-1) { perror(s); exit(1); }
+#define CHK_SSL(err) if ((err)==-1) { ERR_print_errors_fp(stderr); exit(2); }
+
+#define CERT_FILE "C:\\Users\\t-aprokic\\Desktop\\LBCertAndKeys\\client"
+#define KEY_FILE "C:\\Users\\t-aprokic\\Desktop\\LBCertAndKeys\\client"
 
 #define DEFAULT_BUFLEN 512
 #define DEFAULT_PORT "27015"
 #define MSG_LEN 100
+
+
+#define ENCRYPTION_TYPE 1
+
+enum EncryptionType
+{
+    UNENCRYPTED = 0,
+    ENCRYPTED = 1,
+    DEBUG = 2
+};
 
 /************************ DOCUMENTATION ABOUT USED FUNCTIONS ***************************
 *
@@ -90,6 +111,8 @@ int inputLength(char* msg)
 }
 
 SOCKET ConnectSocket = INVALID_SOCKET;
+SSL_CTX* ctx;
+SSL* ssl;
 void handleSignal(int signal)
 {
     // Shutdown the socket before cleanup
@@ -98,8 +121,14 @@ void handleSignal(int signal)
     // Close the socket
     closesocket(ConnectSocket);
 
+    if (ENCRYPTION_TYPE == ENCRYPTED)
+    {
+        SSL_free(ssl);
+        SSL_CTX_free(ctx);
+    }
+
     // Cleanup Winsock
-    WSACleanup();
+    WSACleanup(); 
 
     exit(0);
 }
@@ -108,6 +137,46 @@ int generateRandomNumber(int min, int max)
 {
     return rand() % (max - min + 1) + min;
 }
+
+
+SSL_CTX* initSSLContext(char* idx)
+{
+    std::string certFile = CERT_FILE + std::string(idx) + ".crt";
+    std::string keyFile = KEY_FILE + std::string(idx) + ".key";
+    std::cout << certFile << "\n";
+    std::cout << keyFile << "\n";
+
+    SSL_load_error_strings();
+    OpenSSL_add_ssl_algorithms();
+    //const SSL_METHOD* meth = TLS_client_method();
+    SSL_CTX* ctx = SSL_CTX_new(TLS_method());
+    if (!ctx) {
+        ERR_print_errors_fp(stderr);
+        exit(2);
+    }
+
+    /* Load the client's certificate */
+    if (SSL_CTX_use_certificate_file(ctx, certFile.c_str(), SSL_FILETYPE_PEM) != 1) {
+        std::cout << "Err when Load the client certificate into the context\n";
+    }
+    printf("Successfully loaded client cert\n");
+
+    /* Load the client's key */
+    if (SSL_CTX_use_PrivateKey_file(ctx, keyFile.c_str(), SSL_FILETYPE_PEM) != 1) {
+        std::cout << "Err when Load the private key into the context\n";
+    }
+    printf("Successfully loaded client private key \n");
+
+    /* Verify that the client's certificate and the key match */
+    if (SSL_CTX_check_private_key(ctx) != 1) {
+        std::cout << "Err when Load the private key into the context\n";
+    }
+    printf("Successfully verified pk with cert\n");
+
+    return ctx;
+}
+
+
 
 //argv[0] - name of .exe file
 //argv[1] - server dns name or ip address (localhost in this case)
@@ -193,6 +262,30 @@ int __cdecl main(int argc, char** argv)
         break;
     }
 
+    /* Init openSSL application context*/
+    //SSL connect
+    if (ENCRYPTION_TYPE == ENCRYPTED)
+    {
+        ctx = initSSLContext(argv[2]);
+
+        ssl = SSL_new(ctx);               CHK_NULL(ssl);
+        SSL_set_fd(ssl, ConnectSocket);
+        iResult = SSL_connect(ssl);       CHK_SSL(iResult);
+    }
+
+    //debug
+    if (ENCRYPTION_TYPE == DEBUG)
+    {
+        ctx = initSSLContext(argv[2]);
+
+        ssl = SSL_new(ctx);               CHK_NULL(ssl);
+        printf("ctx setted successfully\n");
+        SSL_set_fd(ssl, ConnectSocket);
+        printf("ssl_set_fd success\n");
+        //iResult = SSL_connect(ssl);       CHK_SSL(iResult);
+    }
+    
+
     freeaddrinfo(result);
 
     if (ConnectSocket == INVALID_SOCKET) 
@@ -217,7 +310,15 @@ int __cdecl main(int argc, char** argv)
         size_t len = strlen(msg);
         printf("Sending [%s] to server\n", msg);
 
-        iResult = send(ConnectSocket, msg, len, 0);
+        if (ENCRYPTION_TYPE == ENCRYPTED)
+        {
+            iResult = SSL_write(ssl, msg, len);  CHK_SSL(iResult);
+        }
+        else
+        {
+            iResult = send(ConnectSocket, msg, len, 0);
+        }
+
         if (iResult == SOCKET_ERROR) 
         {
             printf("send failed with error: %d\n", WSAGetLastError());
@@ -228,7 +329,17 @@ int __cdecl main(int argc, char** argv)
 
         //Read msg from server
         memset(recvbuf, 0, sizeof(recvbuf));
-        iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
+
+        if (ENCRYPTION_TYPE == ENCRYPTED)
+        {
+            iResult = SSL_read(ssl, recvbuf, sizeof(recvbuf) - 1);   CHK_SSL(iResult);
+            recvbuf[iResult] = '\0';
+        }
+        else
+        {
+            iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0); 
+        }
+
         if (iResult > 0)
         {
             //printf("Bytes received: %d\n", iResult);

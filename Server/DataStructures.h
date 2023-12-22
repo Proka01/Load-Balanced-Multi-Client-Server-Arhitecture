@@ -27,6 +27,12 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+//openSSL macros
+#define CHK_NULL(x) if ((x)==NULL) exit (1)
+#define CHK_ERR(err,s) if ((err)==-1) { perror(s); exit(1); }
+#define CHK_SSL(err) if ((err)==-1) { ERR_print_errors_fp(stderr); exit(2); }
+
+//app macros
 #define MAX_SOCKET_POOLS 3
 #define MAX_WORKER_THREADS 3
 #define MAX_NETWORK_THREADS (MAX_SOCKET_POOLS)
@@ -34,6 +40,8 @@
 #define MAX_THREADS ((MAX_WORKER_THREADS) + (MAX_NETWORK_THREADS) + (MAX_LISTENER_THREADS))
 #define DEFAULT_BUFLEN 512
 #define JAM_LIMIT 3
+
+#define ENCRYPTION_TYPE 1
 
 class ReadResult
 {
@@ -127,6 +135,7 @@ public:
 
     SOCKET iConnAccept(SOCKET ListenSocket) override
     {
+        //TCP Handshacke server side
         // Accept a client socket
         SOCKET ClientSocket = accept(ListenSocket, NULL, NULL);
 
@@ -134,6 +143,10 @@ public:
         if (ClientSocket == INVALID_SOCKET)
         {
             printf("accept failed with error: %d\n", WSAGetLastError());
+        }
+        else
+        {
+            setClientSocketFd(ClientSocket);
         }
 
         return ClientSocket;
@@ -176,6 +189,106 @@ public:
     }
 };
 
+
+class EncryptedConn : public iConnection 
+{
+private:
+    SSL_CTX* ctx; 
+    SSL* ssl;
+
+public:
+    EncryptedConn(SOCKET ClientSocket, SSL_CTX* sslContext) : iConnection(ClientSocket), ctx(sslContext) {}
+    EncryptedConn(SSL_CTX* sslContext) : iConnection(), ctx(sslContext) {}
+
+    SSL_CTX* getSSLContext() const 
+    {
+        return ctx;
+    }
+
+    void setSSLContext(SSL_CTX* sslContext) 
+    {
+        this->ctx = sslContext;
+    }
+
+    SSL* getSSLObject() const
+    {
+        return ssl;
+    }
+
+    void setSSLObjcet(SSL* sslObj)
+    {
+        this->ssl = sslObj;
+    }
+
+    SOCKET iConnAccept(SOCKET ListenSocket) override
+    {
+        //TCP handshake server side
+        // Accept a client socket
+        SOCKET ClientSocket = accept(ListenSocket, NULL, NULL);
+
+        //Check for errors
+        if (ClientSocket == INVALID_SOCKET)
+        {
+            printf("accept failed with error: %d\n", WSAGetLastError());
+        }
+        else
+        {
+            setClientSocketFd(ClientSocket);
+        }
+
+        /* TCP connection is ready. Do server side SSL. */
+        //TLS handshake server side (Server hello)
+        SSL* ssl = SSL_new(ctx);             CHK_NULL(ssl);
+        SSL_set_fd(ssl, ClientSocket);
+        int err = SSL_accept(ssl);           CHK_SSL(err);
+
+        setSSLObjcet(ssl);
+
+        return ClientSocket;
+    }
+
+    ReadResult read() override
+    {
+        SSL* ssl = getSSLObject();
+        ReadResult readRes;
+        int iResult;
+
+        char recvbuf[DEFAULT_BUFLEN];
+        int recvbuflen = DEFAULT_BUFLEN;
+
+        //Read msg from Client
+        memset(recvbuf, 0, sizeof(recvbuf));
+
+        iResult = SSL_read(ssl, recvbuf, sizeof(recvbuf) - 1);   CHK_SSL(iResult);
+        recvbuf[iResult] = '\0';
+
+        if (iResult > 0)
+        {
+            readRes.setBytesRead(iResult);
+            readRes.setContent(recvbuf);
+        }
+        else
+        {
+            printf("ERR iResult < 0");
+        }
+
+        return readRes;
+    }
+
+    int write(char* msg, int msgLen) override
+    {
+        int iResult = SSL_write(this->ssl, msg, msgLen);  CHK_SSL(iResult);
+        return iResult;
+    }
+
+    void closeConnection() override
+    {
+        closesocket(getClientSocketFd());
+        SSL_free(getSSLObject());
+    }
+};
+
+
 enum Operation 
 {
     PLUS = 0,
@@ -183,6 +296,13 @@ enum Operation
     MUL = 2,
     DIV = 3,
     MOD = 4
+};
+
+enum EncryptionType
+{
+    UNENCRYPTED = 0,
+    ENCRYPTED = 1,
+    DEBUG = 2
 };
 
 template <typename T>
@@ -327,41 +447,3 @@ public:
     Request(int rid, int a, int b, Operation op, std::shared_ptr<iConnection> iConn, std::shared_ptr<ProducerConsumerQueue<Response>> responseQueuePtr)
         : rid(rid), a(a), b(b), op(op), iConn(iConn), job_resp_queue_ptr(responseQueuePtr) {}
 };
-
-
-
-
-//class EncryptedConn : public iConnect 
-//{
-//private:
-//    SSL_CTX* ctx; 
-//
-//public:
-//    EncryptedConn(SSL_CTX* sslContext) : ctx(sslContext) {}
-//
-//    SSL_CTX* getSSLContext() const 
-//    {
-//        return ctx;
-//    }
-//
-//    void setSSLContext(SSL_CTX* sslContext) 
-//    {
-//        ctx = sslContext;
-//    }
-//
-//    SOCKET iConnAccept(SOCKET ListenSocket) override
-//    {
-//        //TODO implement
-//    }
-//
-//    int read() override 
-//    {
-//        //TODO implement
-//    }
-//
-//    int write() override 
-//    {
-//        //TODO implement
-//    }
-//};
-
